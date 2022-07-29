@@ -5,28 +5,23 @@ import math
 logger = logging.getLogger(__name__)
 
 
-def rotation_matrix(yaw: float, pitch: float, roll: float) -> np.ndarray:
+def rotation_matrix(rotation: np.ndarray) -> np.ndarray:
     """
     Create an Euler rotation matrix in axis order y, x and z.
 
     Parameters:
-        yaw: Yaw angle in degrees.
-        pitch: Pitch angle in degrees.
-        roll: Roll angle in degrees.
+        rotation: A rotation vector of length three [yaw, pitch, roll]
+        in degrees.
 
     Returns:
         A 4x4 rotation matrix.
     """
-    y = np.radians(yaw)
-    x = np.radians(pitch)
-    z = np.radians(roll)
+    assert isinstance(rotation, np.ndarray)
+    assert rotation.shape == (3,)
 
-    cy = math.cos(y)
-    sy = math.sin(y)
-    cx = math.cos(x)
-    sx = math.sin(x)
-    cz = math.cos(z)
-    sz = math.sin(z)
+    radians = np.radians(rotation)
+    cy, cx, cz = np.cos(radians)
+    sy, sx, sz = np.sin(radians)
 
     mat = [cy * cz + sx * sy * sz, cz * sx * sy - cy * sz, cx * sy, 0.0,
            cx * sz, cx * cz, -sx, 0.0,
@@ -37,7 +32,7 @@ def rotation_matrix(yaw: float, pitch: float, roll: float) -> np.ndarray:
     return np.array(mat).reshape(4, 4)
 
 
-def decompose_rotation(mat: np.ndarray) -> tuple:
+def decompose_rotation(mat: np.ndarray) -> np.ndarray:
     """    
     Decompose a 4x4 matrix rotation part into Euler rotations. Axis
     order y, x and z.
@@ -55,26 +50,26 @@ def decompose_rotation(mat: np.ndarray) -> tuple:
     x = math.asin(-mat[1, 2])
     z = math.atan2(mat[1, 0], mat[1, 1])
 
-    return (math.degrees(y), math.degrees(x), math.degrees(z))
+    return np.degrees((y, x, z))
 
 
-def translation_matrix(translate: np.ndarray) -> np.ndarray:
+def translation_matrix(translation: np.ndarray) -> np.ndarray:
     """
     Create a translation matrix.
 
     Parameters:
-        translate: Translation vector of length three.
+        translation: Translation vector of length three.
 
     Returns:
         A 4x4 translation matrix.
     """
-    assert isinstance(translate, np.ndarray)
-    assert translate.shape == (3,)
+    assert isinstance(translation, np.ndarray)
+    assert translation.shape == (3,)
 
     mat = np.eye(4, 4, dtype=np.float64)
-    mat[0, 3] = translate[0]
-    mat[1, 3] = translate[1]
-    mat[2, 3] = translate[2]
+    mat[0, 3] = translation[0]
+    mat[1, 3] = translation[1]
+    mat[2, 3] = translation[2]
 
     return mat
 
