@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def rotation_matrix(yaw: float, pitch: float, roll: float) -> np.ndarray:
     """
-    Compute an Euler rotation matrix in axis order y, x and z.
+    Create an Euler rotation matrix in axis order y, x and z.
 
     Parameters:
         yaw: Yaw angle in degrees.
@@ -37,10 +37,10 @@ def rotation_matrix(yaw: float, pitch: float, roll: float) -> np.ndarray:
     return np.array(mat).reshape(4, 4)
 
 
-def decompose_rotation_matrix(mat: np.ndarray) -> tuple:
-    """
-    Decompose an Euler rotation matrix in order y, x, and z into
-    yaw, pitch and roll.
+def decompose_rotation(mat: np.ndarray) -> tuple:
+    """    
+    Decompose a 4x4 matrix rotation part into Euler rotations. Axis
+    order y, x and z.
 
     Parameters:
         mat: 4x4 matrix.
@@ -56,3 +56,44 @@ def decompose_rotation_matrix(mat: np.ndarray) -> tuple:
     z = math.atan2(mat[1, 0], mat[1, 1])
 
     return (math.degrees(y), math.degrees(x), math.degrees(z))
+
+
+def translation_matrix(translate: np.ndarray) -> np.ndarray:
+    """
+    Create a translation matrix.
+
+    Parameters:
+        translate: Translation vector of length three.
+
+    Returns:
+        A 4x4 translation matrix.
+    """
+    assert isinstance(translate, np.ndarray)
+    assert translate.shape == (3,)
+
+    mat = np.eye(4, 4, dtype=np.float64)
+    mat[0, 3] = translate[0]
+    mat[1, 3] = translate[1]
+    mat[2, 3] = translate[2]
+
+    return mat
+
+
+def decompose_translation(mat: np.ndarray) -> np.ndarray:
+    """
+    Decompose a 4x4 matrix translation part into an array.
+
+    Parameters:
+        mat: 4x4 matrix.
+
+    Returns:
+        Array with translation x, y and z.
+    """
+    assert isinstance(mat, np.ndarray)
+    assert mat.shape == (4, 4)
+
+    x = mat[0, 3]
+    y = mat[1, 3]
+    z = mat[2, 3]
+
+    return np.array([x, y, z])
