@@ -141,3 +141,22 @@ def relative_pose(pose_from: np.ndarray, pose_to: np.ndarray) -> np.ndarray:
     assert pose_to.shape == (4, 4)
 
     return np.linalg.inv(pose_from) @ pose_to
+
+
+def apply_pose(pose_from: np.ndarray, pose_delta: np.ndarray) -> np.ndarray:
+    """
+    Apply a delta pose, to get a new pose.
+
+    Parameters:
+        pose_from: 4x4 pose matrix.
+        pose_delta: 4x4 pose matrix.
+
+    Returns:
+        A 4x4 matrix with the new pose.
+    """
+    assert isinstance(pose_from, np.ndarray)
+    assert pose_from.shape == (4, 4)
+    assert isinstance(pose_delta, np.ndarray)
+    assert pose_delta.shape == (4, 4)
+
+    return pose_from @ pose_delta

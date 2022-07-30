@@ -102,3 +102,24 @@ class MatrixTest(unittest.TestCase):
         rotation, translation = mat.decompose_pose(m)
         np.testing.assert_almost_equal(rotation, np.array([-45.0, -10.5, 5.0]))
         np.testing.assert_almost_equal(translation, np.array([2.0, -1.0, 2.0]))
+
+    def test_apply_pose(self):
+        """
+        Test of applying a pose to another (inverse of the relative pose).
+        """
+        rotation_from = np.array([90.0, 0.0, 0.0])
+        translation_from = np.array([10.0, 0.0, 10.0])
+        pose_from = mat.pose_matrix(rotation_from, translation_from)
+
+        rotation_to = np.array([45.0, -10.5, 5.0])
+        translation_to = np.array([12.0, -1.0, 8.0])
+        pose_to = mat.pose_matrix(rotation_to, translation_to)
+
+        pose_delta = mat.relative_pose(pose_from, pose_to)
+
+        # With the apply we shall now have reconstructed pose_to.
+        m = mat.apply_pose(pose_from, pose_delta)
+        self.assertTupleEqual(m.shape, (4, 4))
+        rotation, translation = mat.decompose_pose(m)
+        np.testing.assert_almost_equal(rotation, rotation_to)
+        np.testing.assert_almost_equal(translation, translation_to)
