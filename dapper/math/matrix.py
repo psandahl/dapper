@@ -92,3 +92,32 @@ def decompose_translation(mat: np.ndarray) -> np.ndarray:
     z = mat[2, 3]
 
     return np.array([x, y, z])
+
+
+def pose_matrix(rotation: np.ndarray, translation: np.ndarray) -> np.ndarray:
+    """
+    Create a pose matrix from rotation and translation (the inversion of a 
+    pose matrix is the extrinsic matrix).
+
+    Parameters:        
+        rotation: A rotation vector of length three [yaw, pitch, roll]
+        in degrees.
+        translation: Translation vector of length three.
+
+    Returns:
+        A 4x4 pose matrix.
+    """
+    return translation_matrix(translation) @ rotation_matrix(rotation)
+
+
+def decompose_pose(mat: np.ndarray) -> tuple:
+    """
+    Decompose pose into rotation and translation.
+
+    Parameters:
+        mat: 4x4 pose matrix.
+
+    Returns:
+        Tuple ([yaw, pitch, roll], [x, y, z]). Angles are degrees.
+    """
+    return decompose_rotation(mat), decompose_translation(mat)

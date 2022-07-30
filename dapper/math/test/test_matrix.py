@@ -36,3 +36,18 @@ class MatrixTest(unittest.TestCase):
         translation2 = mat.decompose_translation(m)
         self.assertTupleEqual(translation2.shape, (3,))
         np.testing.assert_equal(translation2, translation1)
+
+    def test_pose_matrix(self):
+        """
+        Test creation and decomposition of pose matrix.
+        """
+        rotation1 = np.array([-34.66, 12.1, -128.784])
+        translation1 = np.array([1.0, 2.0, 3.0])
+        m = mat.pose_matrix(rotation1, translation1)
+
+        self.assertTupleEqual(m.shape, (4, 4))
+        rotation2, translation2 = mat.decompose_pose(m)
+        self.assertTupleEqual(rotation2.shape, (3,))
+        self.assertTupleEqual(translation2.shape, (3,))
+        np.testing.assert_almost_equal(rotation2, rotation1)
+        np.testing.assert_equal(translation2, translation1)
