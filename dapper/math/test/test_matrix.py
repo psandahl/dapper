@@ -51,3 +51,54 @@ class MatrixTest(unittest.TestCase):
         self.assertTupleEqual(translation2.shape, (3,))
         np.testing.assert_almost_equal(rotation2, rotation1)
         np.testing.assert_equal(translation2, translation1)
+
+    def test_relative_pose(self):
+        """
+        Test of relative pose between two pose matrices.
+        """
+        # Simplest case: 'from' is 'zero', then the result
+        # shall be equal to 'to'.
+        rotation_from = np.array([0.0, 0.0, 0.0])
+        translation_from = np.array([0.0, 0.0, 0.0])
+        pose_from = mat.pose_matrix(rotation_from, translation_from)
+
+        rotation_to = np.array([45.0, 17.0, 5.0])
+        translation_to = np.array([1.0, 2.0, 3.0])
+        pose_to = mat.pose_matrix(rotation_to, translation_to)
+
+        m = mat.relative_pose(pose_from, pose_to)
+        self.assertTupleEqual(m.shape, (4, 4))
+        rotation, translation = mat.decompose_pose(m)
+        np.testing.assert_almost_equal(rotation, rotation_to)
+        np.testing.assert_almost_equal(translation, translation_to)
+
+        # The little more complicated case is when 'from' is
+        # rotated and translated. 'To' has the same global
+        # rotation, and there shall thus be no relative rotation.
+        rotation_from = np.array([90.0, 0.0, 0.0])
+        translation_from = np.array([10.0, 0.0, 10.0])
+        pose_from = mat.pose_matrix(rotation_from, translation_from)
+
+        rotation_to = np.array([90.0, 0.0, 0.0])
+        translation_to = np.array([12.0, -1.0, 8.0])
+        pose_to = mat.pose_matrix(rotation_to, translation_to)
+
+        m = mat.relative_pose(pose_from, pose_to)
+        rotation, translation = mat.decompose_pose(m)
+        np.testing.assert_almost_equal(rotation, np.array([0.0, 0.0, 0.0]))
+        np.testing.assert_almost_equal(translation, np.array([2.0, -1.0, 2.0]))
+
+        # The most complicated case is when there also are a relative
+        # rotation.
+        rotation_from = np.array([90.0, 0.0, 0.0])
+        translation_from = np.array([10.0, 0.0, 10.0])
+        pose_from = mat.pose_matrix(rotation_from, translation_from)
+
+        rotation_to = np.array([45.0, -10.5, 5.0])
+        translation_to = np.array([12.0, -1.0, 8.0])
+        pose_to = mat.pose_matrix(rotation_to, translation_to)
+
+        m = mat.relative_pose(pose_from, pose_to)
+        rotation, translation = mat.decompose_pose(m)
+        np.testing.assert_almost_equal(rotation, np.array([-45.0, -10.5, 5.0]))
+        np.testing.assert_almost_equal(translation, np.array([2.0, -1.0, 2.0]))

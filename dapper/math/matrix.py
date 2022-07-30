@@ -121,3 +121,23 @@ def decompose_pose(mat: np.ndarray) -> tuple:
         Tuple ([yaw, pitch, roll], [x, y, z]). Angles are degrees.
     """
     return decompose_rotation(mat), decompose_translation(mat)
+
+
+def relative_pose(pose_from: np.ndarray, pose_to: np.ndarray) -> np.ndarray:
+    """
+    Compute the relative pose between two poses.
+
+    Parameters:
+        pose_from: 4x4 pose matrix.
+        pose_to: 4x4 pose matrix.
+
+    Returns:
+        A 4x4 matrix with the relative pose describing pose_to
+        relative to pose_from.
+    """
+    assert isinstance(pose_from, np.ndarray)
+    assert pose_from.shape == (4, 4)
+    assert isinstance(pose_to, np.ndarray)
+    assert pose_to.shape == (4, 4)
+
+    return np.linalg.inv(pose_from) @ pose_to
