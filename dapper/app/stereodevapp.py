@@ -6,19 +6,19 @@ from dapper.util.groundtruthiterator import GroundTruthIterator
 logger = logging.getLogger(__name__)
 
 
-class DepthDevApp():
+class StereoDevApp():
     """
     An application for development of depth algorithms in isolation, 
     using calibrated datasets with ground truth poses.
     """
 
     def __init__(self) -> None:
-        logger.debug('Construct DepthDevApp object')
+        logger.debug('Construct StereoDevApp object')
 
         self.frame_id = 0
 
     def run(self, data_dir: str) -> bool:
-        logger.info(f"Start DepthDevApp with data_dir='{data_dir}'")
+        logger.info(f"Start StereoDevApp with data_dir='{data_dir}'")
 
         self.frame_id = 0
 

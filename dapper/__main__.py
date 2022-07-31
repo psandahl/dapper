@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from dapper.app.depthdevapp import DepthDevApp
+from dapper.app.stereodevapp import StereoDevApp
 
 logger = None
 handler = None
@@ -35,8 +35,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-l', '--log',
                         help='set the effective log level (DEBUG, INFO, WARNING or ERROR)')
-    parser.add_argument('--depthdev', action='store_true',
-                        help='run the depth development application')
+    parser.add_argument('-s', '--stereo', action='store_true',
+                        help='run the stereo development application')
     parser.add_argument('-d', '--dataset',
                         help='dataset for the application')
     args = parser.parse_args()
@@ -52,8 +52,8 @@ def main() -> None:
             sys.exit(1)
 
     # Check for which application to run.
-    if args.depthdev and not args.dataset is None:
-        app = DepthDevApp()
+    if args.stereo and not args.dataset is None:
+        app = StereoDevApp()
         if not app.run(args.dataset):
             sys.exit(1)
     else:
