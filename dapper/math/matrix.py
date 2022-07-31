@@ -125,7 +125,8 @@ def decompose_pose(mat: np.ndarray) -> tuple:
 
 def relative_pose(pose_from: np.ndarray, pose_to: np.ndarray) -> np.ndarray:
     """
-    Compute the relative pose between two poses.
+    Compute the relative pose between two poses. The relative pose
+    is the inverse compared to what OpenCV return in 'reconverPose()'.
 
     Parameters:
         pose_from: 4x4 pose matrix.
@@ -160,3 +161,44 @@ def apply_pose(pose_from: np.ndarray, pose_delta: np.ndarray) -> np.ndarray:
     assert pose_delta.shape == (4, 4)
 
     return pose_from @ pose_delta
+
+
+def extract_3x3(mat: np.ndarray) -> np.ndarray:
+    """
+    Extract a 3x3 section from a matrix. If the matrix is too
+    small the input is returned.
+
+    Parameters:
+        mat: Input matrix.
+
+    Returns:
+        A 3x3 matrix, from the input.
+    """
+    assert isinstance(mat, np.ndarray)
+
+    rows, cols = mat.shape
+    if min(rows, cols) >= 3 and max(rows, cols) > 3:
+        return mat[:3, :3]
+    else:
+        logger.warning(
+            f'Original matrix returned - size=({rows}, {cols})')
+        return mat
+
+
+def add_row(mat: np.ndarray) -> np.ndarray:
+    """
+    Add a new row to a matrix. The row will be ended with a one.
+
+    Parameters:
+        mat: A MxN matrix.
+
+    Returns:
+        A (M+1)xN matrix.
+    """
+    assert isinstance(mat, np.ndarray)
+
+    _, cols = mat.shape
+    row = np.zeros(cols, dtype=mat.dtype)
+    row[-1] = 1
+
+    return np.vstack((mat, row))

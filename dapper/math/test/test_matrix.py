@@ -123,3 +123,30 @@ class MatrixTest(unittest.TestCase):
         rotation, translation = mat.decompose_pose(m)
         np.testing.assert_almost_equal(rotation, rotation_to)
         np.testing.assert_almost_equal(translation, translation_to)
+
+    def test_extract_3x3(self):
+        """
+        Test the extraction of a 3x3 matrix from a matrix.
+        """
+        m44 = np.arange(0, 16).reshape(4, 4)
+
+        m33 = mat.extract_3x3(m44)
+        self.assertTupleEqual((3, 3), m33.shape)
+        np.testing.assert_equal(m33, np.array(
+            [0, 1, 2, 4, 5, 6, 8, 9, 10]).reshape(3, 3))
+
+        # Shall return the input reference, as no extraction is needed.
+        m33_1 = mat.extract_3x3(m33)
+        self.assertIs(m33_1, m33)
+
+    def test_add_row(self):
+        """
+        Test addition of a row to a matrix.
+        """
+        m34 = np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]).reshape(3, 4)
+
+        m44 = mat.add_row(m34)
+        self.assertTupleEqual((4, 4), m44.shape)
+
+        # Result shall be 4x4 identity matrix.
+        np.testing.assert_equal(m44, np.eye(4, 4))

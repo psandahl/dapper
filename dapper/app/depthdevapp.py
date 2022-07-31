@@ -1,5 +1,7 @@
 import logging
 
+from dapper.util.groundtruthiterator import GroundTruthIterator
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,5 +15,11 @@ class DepthDevApp():
         logger.debug('Construct DepthDevApp object')
 
     def run(self, data_dir: str) -> bool:
-        logger.debug(f'Start DepthDevApp with data_dir={data_dir}')
+        logger.info(f"Start DepthDevApp with data_dir='{data_dir}'")
+
+        itr = GroundTruthIterator(data_dir)
+        if not itr.is_ok:
+            logger.error('Failed to initialize the data iterator')
+            return False
+
         return True
