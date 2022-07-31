@@ -1,3 +1,4 @@
+import cv2 as cv
 import logging
 import os
 
@@ -13,12 +14,18 @@ class GroundTruthIterator:
 
     File 'calib.txt', with one or several 3x4 calibration matrices.
     File 'poses.txt', with 3x4 pose matrices.
-    Directory 'image_l' with images named such that they can be sorted.
+    Directory 'image_l', with images named such that they can be sorted.
 
     Check is_ok before use.
     """
 
     def __init__(self, data_dir: str) -> None:
+        """
+        Construct the iterator, given the path to the data directory.
+
+        Parameters:
+            data_dir: Path to data directory.
+        """
         logger.debug('Construct GroundTruthIterator object')
 
         calib_matrices = dr.read_3x4_matrices(
@@ -45,3 +52,30 @@ class GroundTruthIterator:
 
         self.num_data = num_images
         self.current_data = 0
+
+    def __iter__(self):
+        """
+        Reset the iteration index.
+        """
+        self.current_data = 0
+
+        return self
+
+    def __next__(self):
+        """
+        Get the next item in the dataset.
+
+        Returns:
+            Tuple (grayscale image, 3x3 K matrix, 4x4 pose matrix).
+        """
+        if self.current_data < self.num_data:
+            image = cv.imread(
+                self.image_paths[self.current_data], cv.IMREAD_GRAYSCALE)
+            pose = mat.add_row(self.pose_matrices[self.current_data])
+
+            self.current_data += 1
+
+            return image, self.K, pose
+        else:
+            logger.debug('Reached last data item')
+            raise StopIteration
