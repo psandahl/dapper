@@ -2,6 +2,7 @@ import cv2 as cv
 import logging
 import numpy as np
 
+import dapper.image.helpers as hlp
 import dapper.math.matrix as mat
 from dapper.util.groundtruthiterator import GroundTruthIterator
 
@@ -40,6 +41,9 @@ class StereoDevApp():
             return False
 
         for image, K, pose in dataset:
+            assert hlp.is_image(image)
+            assert hlp.image_channels(image) == 1
+
             self.current_image = image
             self.current_pose = pose
             self.current_K = K  # Assume never change.
