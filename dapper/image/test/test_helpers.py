@@ -65,3 +65,23 @@ class HelpersTest(unittest.TestCase):
 
         self.assertFalse(hlp.within_image_extent(image_size, 0, 0, 1))
         self.assertFalse(hlp.within_image_extent(image_size, 29, 19, 1))
+
+    def test_pixel_to_index(self):
+        """
+        Test conversion from pixel to index.
+        """
+        image_size = (30, 20)
+
+        self.assertEqual(hlp.pixel_to_index(image_size, 0, 0), 0)
+        self.assertEqual(hlp.pixel_to_index(image_size, 29, 0), 29)
+        self.assertEqual(hlp.pixel_to_index(image_size, 2, 2), 62)
+
+    def test_index_to_pixel(self):
+        """
+        Test conversion from index to pixel.
+        """
+        image_size = (30, 20)
+
+        self.assertTupleEqual(hlp.index_to_pixel(image_size, 0), (0, 0))
+        self.assertTupleEqual(hlp.index_to_pixel(image_size, 29), (29, 0))
+        self.assertTupleEqual(hlp.index_to_pixel(image_size, 62), (2, 2))

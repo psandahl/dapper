@@ -81,3 +81,39 @@ def within_image_extent(image_size: tuple, x: int, y: int, border: int = 0) -> b
 
     w, h = image_size
     return (x - border) >= 0 and (x + border) < w and (y - border) >= 0 and (y + border) < h
+
+
+def pixel_to_index(image_size: tuple, x: int, y: int) -> int:
+    """
+    Convert a pixel coordinate to index image.
+
+    Parameters:
+        image_size: Tuple (w, h).
+        x: x coordinate.
+        y: y coordinate.
+
+    Returns:
+        Image index.
+    """
+    assert len(image_size) == 2
+    assert within_image_extent(image_size, x, y)
+
+    w, _ = image_size
+    return y * w + x
+
+
+def index_to_pixel(image_size: tuple, index: int) -> tuple:
+    """
+    Convert an image index to pixel coordinate.
+
+    Parameters:
+        image_size: Tuple (w, h).
+        index: Image index.
+
+    Returns:
+        Tuple (x, y).
+    """
+    assert len(image_size) == 2
+
+    w, _ = image_size
+    return index % w, index // w
