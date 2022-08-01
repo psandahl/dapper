@@ -2,6 +2,7 @@ import logging
 import math
 import numpy as np
 
+import dapper.common.settings as settings
 import dapper.image.helpers as hlp
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,50 @@ def gradient_orientation(gradient: np.ndarray) -> float:
     return math.degrees(math.atan2(y, x))
 
 
-def gradient_visualization_images(image: np.ndarray, threshold: float) -> tuple:
+def strong_gradients(image: np.ndarray) -> np.ndarray:
+    """
+    Generate strong gradients from the image into an index buffer.    
+
+    Parameters:
+        image: Grayscale image.
+
+    Returns:
+        Index buffer, where each index represents a pixel in the target image.
+    """
+    assert hlp.is_image(image)
+    assert hlp.image_channels(image) == 1
+
+    # Todo: *SLOW*
+
+    w, h = hlp.image_size(image)
+    indices = np.zeros(w * h, dtype=np.int32)
+
+    threshold_sq = settings.MIN_GRADIANT_THRESHOLD * settings.MIN_GRADIANT_THRESHOLD
+
+    i = 0
+    for y in range(1, h - 1):
+        for x in range(1, w - 1):
+            g = pixel_gradient(image, x, y)
+
+            if gradient_magnitude_sq(g) > threshold_sq:
+                indices[i] = hlp.pixel_to_index((w, h), x, y)
+                i += 1
+
+    logger.debug(f'From image size={w * h}, strong pixels are={i}')
+
+    return indices[:i]
+
+
+def gradient_visualization_images(image: np.ndarray) -> tuple:
+    """
+    Generate visualization images (Gx, Gy, strongest gradient pixels).
+
+    Parameters:
+        image: Grayscale image.
+
+    Return:
+        Tuple (Gx, Gy, strongest gradient pixels).
+    """
     assert hlp.is_image(image)
     assert hlp.image_channels(image) == 1
     assert image.dtype == np.uint8
@@ -77,7 +121,7 @@ def gradient_visualization_images(image: np.ndarray, threshold: float) -> tuple:
 
     strongest = np.zeros((h, w), dtype=np.uint8)
 
-    threshold_sq = threshold * threshold
+    threshold_sq = settings.MIN_GRADIANT_THRESHOLD * settings.MIN_GRADIANT_THRESHOLD
 
     for y in range(1, h - 1):
         for x in range(1, w - 1):

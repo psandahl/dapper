@@ -22,6 +22,7 @@ class StereoDevApp():
         self.frame_id = 0
         self.keyframe_images = list()
         self.keyframe_poses = list()
+        self.keyframe_strong_gradients = list()
         self.current_image = None
         self.current_pose = np.eye(4, 4, dtype=np.float64)
 
@@ -31,6 +32,7 @@ class StereoDevApp():
         self.frame_id = 0
         self.keyframe_images = list()
         self.keyframe_poses = list()
+        self.keyframe_strong_gradients = list()
         self.current_image = None
         self.current_pose = np.eye(4, 4, dtype=np.float64)
         self.current_K = np.eye(3, 3, dtype=np.float64)
@@ -50,12 +52,6 @@ class StereoDevApp():
             self.current_K = K  # Assume never change.
 
             cv.imshow('current image', self.current_image)
-
-            Gx, Gy, strongest = gr.gradient_visualization_images(
-                self.current_image, 10)
-            cv.imshow('Gx', Gx)
-            cv.imshow('Gy', Gy)
-            cv.imshow('strongest', strongest)
 
             print(f'Current frame id={self.frame_id}')
             self._print_relative_latest_keyframe()
@@ -82,8 +78,11 @@ class StereoDevApp():
     def _new_keyframe(self):
         logger.info(f'Add frame id={self.frame_id} as new keyframe')
 
+        # Store information about the keyframe.
         self.keyframe_images.append(self.current_image)
         self.keyframe_poses.append(self.current_pose)
+        self.keyframe_strong_gradients.append(
+            gr.strong_gradients(self.current_image))
 
     def _new_frame(self):
         logger.info(f'Processing frame id={self.frame_id}')
