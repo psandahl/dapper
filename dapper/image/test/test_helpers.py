@@ -47,3 +47,21 @@ class HelpersTest(unittest.TestCase):
             np.zeros((10, 10, 3), dtype=np.uint8)))
         self.assertEqual(4, hlp.image_channels(
             np.zeros((10, 10, 4), dtype=np.uint8)))
+
+    def test_within_image_extent(self):
+        """
+        Test checking of coordinate within image extent.
+        """
+        image_size = (30, 20)
+
+        self.assertTrue(hlp.within_image_extent(image_size, 0, 0))
+        self.assertTrue(hlp.within_image_extent(image_size, 29, 19))
+        self.assertTrue(hlp.within_image_extent(image_size, 0, 0))
+        self.assertTrue(hlp.within_image_extent(image_size, 15, 10))
+
+        self.assertFalse(hlp.within_image_extent(image_size, 30, 19))
+        self.assertFalse(hlp.within_image_extent(image_size, 29, 20))
+        self.assertFalse(hlp.within_image_extent(image_size, -1, -1))
+
+        self.assertFalse(hlp.within_image_extent(image_size, 0, 0, 1))
+        self.assertFalse(hlp.within_image_extent(image_size, 29, 19, 1))

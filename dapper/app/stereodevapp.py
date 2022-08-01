@@ -2,6 +2,7 @@ import cv2 as cv
 import logging
 import numpy as np
 
+import dapper.image.gradient as gr
 import dapper.image.helpers as hlp
 import dapper.math.matrix as mat
 from dapper.util.groundtruthiterator import GroundTruthIterator
@@ -49,6 +50,13 @@ class StereoDevApp():
             self.current_K = K  # Assume never change.
 
             cv.imshow('current image', self.current_image)
+
+            Gx, Gy, strongest = gr.gradient_visualization_images(
+                self.current_image, 10)
+            cv.imshow('Gx', Gx)
+            cv.imshow('Gy', Gy)
+            cv.imshow('strongest', strongest)
+
             print(f'Current frame id={self.frame_id}')
             self._print_relative_latest_keyframe()
             print('Commands:')
