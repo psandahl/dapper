@@ -2,9 +2,9 @@ import cv2 as cv
 import logging
 import numpy as np
 
-import dapper.image.gradient as gr
 import dapper.image.helpers as hlp
 import dapper.math.matrix as mat
+from dapper.stereo.epimatcher import EpiMatcher
 from dapper.util.groundtruthiterator import GroundTruthIterator
 
 logger = logging.getLogger(__name__)
@@ -20,9 +20,12 @@ class StereoDevApp():
         logger.debug('Construct StereoDevApp object')
 
         self.frame_id = 0
+        self.epi_matcher = EpiMatcher()
+
         self.keyframe_images = list()
         self.keyframe_poses = list()
         self.keyframe_strong_gradients = list()
+
         self.current_image = None
         self.current_pose = np.eye(4, 4, dtype=np.float64)
 
@@ -32,7 +35,7 @@ class StereoDevApp():
         self.frame_id = 0
         self.keyframe_images = list()
         self.keyframe_poses = list()
-        self.keyframe_strong_gradients = list()
+
         self.current_image = None
         self.current_pose = np.eye(4, 4, dtype=np.float64)
         self.current_K = np.eye(3, 3, dtype=np.float64)
@@ -81,11 +84,17 @@ class StereoDevApp():
         # Store information about the keyframe.
         self.keyframe_images.append(self.current_image)
         self.keyframe_poses.append(self.current_pose)
-        self.keyframe_strong_gradients.append(
-            gr.strong_gradients(self.current_image))
+
+        # Add the keyframe to the epi matcher.
+        self.epi_matcher.set_keyframe(self.frame_id, self.current_image,
+                                      self.current_pose, self.current_K)
 
     def _new_frame(self):
         logger.info(f'Processing frame id={self.frame_id}')
+
+        # Match the frame with latest keyframe.
+        self.epi_matcher.match(
+            self.frame_id, self.current_image, self.current_pose, self.current_K)
 
     def _print_relative_latest_keyframe(self):
         if self.keyframe_poses:
