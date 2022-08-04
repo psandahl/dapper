@@ -54,7 +54,7 @@ class StereoDevApp():
             self.current_pose = pose
             self.current_K = K  # Assume never change.
 
-            cv.imshow('current image', self.current_image)
+            # cv.imshow('current image', self.current_image)
 
             print(f'Current frame id={self.frame_id}')
             self._print_relative_latest_keyframe()

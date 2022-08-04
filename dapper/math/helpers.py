@@ -69,3 +69,27 @@ def unproject_image(K_inv: np.ndarray, x: float, y: float, depth: float = 1.0) -
 
     px = np.array([x, y, 1.0])
     return depth * (K_inv @ px)
+
+
+def homogeneous(mat: np.ndarray, xyz: np.ndarray) -> np.ndarray:
+    """
+    Homogeneous multiplication of a 3d vector with a 4x4 matrix.
+
+    Parameters:
+        mat: A 4x4 matrix.
+        xyz: A 3d vector, which will be appended with '1' during
+        multiplication.
+
+    Returns:
+        A transformed 3d vector.
+    """
+    assert isinstance(mat, np.ndarray)
+    assert (4, 4) == mat.shape
+
+    assert isinstance(xyz, np.ndarray)
+    assert (3,) == xyz.shape
+
+    xyz2 = mat @ np.append(xyz, 1.0)
+    xyz2 /= xyz2[3]
+
+    return xyz2[:3]

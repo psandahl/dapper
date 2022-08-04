@@ -117,3 +117,13 @@ def index_to_pixel(image_size: tuple, index: int) -> tuple:
 
     w, _ = image_size
     return index % w, index // w
+
+
+def gray_to_bgr(image: np.ndarray) -> np.ndarray:
+    """
+    Create a BGR copy of the given gray scale image.
+    """
+    assert is_image(image)
+    assert image_channels(image)
+
+    return cv.cvtColor(image, cv.COLOR_GRAY2BGR)
