@@ -42,7 +42,7 @@ def project_image(K: np.ndarray, xyz: np.ndarray) -> np.ndarray:
     """
     assert isinstance(K, np.ndarray)
     assert (3, 3) == K.shape
-    assert (isinstance, xyz)
+    assert isinstance(xyz, np.ndarray)
     assert (3,) == xyz.shape
 
     px = K @ xyz
