@@ -87,7 +87,8 @@ class StereoDevApp():
 
         # Add the keyframe to the epi matcher.
         self.epi_matcher.set_keyframe(self.frame_id, self.current_image,
-                                      self.current_pose, self.current_K)
+                                      self.current_pose, self.current_K,
+                                      None)
 
     def _new_frame(self):
         logger.info(f'Processing frame id={self.frame_id}')
