@@ -1,5 +1,6 @@
 import cv2 as cv
 import logging
+import math
 import numpy as np
 
 import dapper.image.gradient as gr
@@ -108,17 +109,72 @@ class EpiMatcher():
         #cv.circle(keyframe, px, 3, (255, 0, 0))
         cv.drawMarker(keyframe, px, (255, 0, 0))
 
-        # Visualize the selected pixel at three different depths in the other image.
-        pxs = list()
-        for depth, color in [(5.0, (0, 0, 255)), (20.0, (0, 255, 0)), (35.0, (255, 0, 0))]:
-            u, v = px
-            xyz_key = mat_hlp.unproject_image(self.keyframe_K_inv, u, v, depth)
-            xyz_oth = mat_hlp.homogeneous(self.keyframe_to_other, xyz_key)
-            px_oth = mat_hlp.project_image(self.other_K, xyz_oth).astype(int)
-            cv.drawMarker(other, px_oth, color)
-            pxs.append(px_oth)
+        # Mid coordinate in other image.
+        mid_px = mat_hlp.project_image(self.keyframe_K, np.array((0, 0, 50)))
+        cv.circle(other, mid_px.astype(int), 3, (0, 255, 0), cv.FILLED)
 
-        cv.line(other, pxs[0], pxs[-1], (255, 255, 255))
+        min_depth = 5.0
+        max_depth = 50.0
+
+        u, v = px
+        near = mat_hlp.homogeneous(self.keyframe_to_other,
+                                   mat_hlp.unproject_image(self.keyframe_K_inv, u, v, min_depth))
+        far = mat_hlp.homogeneous(self.keyframe_to_other,
+                                  mat_hlp.unproject_image(self.keyframe_K_inv, u, v, max_depth))
+
+        print(f'near={near} far={far}')
+
+        sample_size = 1.0
+
+        near_px = mat_hlp.project_image(self.other_K, near)
+        far_px = mat_hlp.project_image(self.other_K, far)
+        print(f'near_px={near_px} far_px={far_px}')
+
+        radiusx_px = far_px[0] - near_px[0]
+        radiusy_px = far_px[1] - near_px[1]
+        epilength_px = math.hypot(radiusx_px, radiusy_px)
+        stepx_px = radiusx_px * (sample_size / epilength_px)
+        stepy_px = radiusy_px * (sample_size / epilength_px)
+
+        num_steps = epilength_px / sample_size
+
+        print(f'epilength_px={epilength_px}')
+        print(f'stepx_px={stepx_px} stepy_px={stepy_px}')
+
+        print(f'Num steps={num_steps}')
+
+        cv.drawMarker(other, near_px.astype(int), (0, 0, 255))
+        cv.drawMarker(other, far_px.astype(int), (255, 0, 0))
+
+        radiusx_view = far[0] - near[0]
+        radiusy_view = far[1] - near[1]
+
+        epilength_view = math.hypot(radiusx_view, radiusy_view)
+        stepx_view = radiusx_view / num_steps
+        stepy_view = radiusy_view / num_steps
+
+        depth_range = max_depth - min_depth
+        step_depth = depth_range / num_steps
+
+        step = 0
+        px = near_px
+        x = near[0]
+        y = near[1]
+        z = near[2]
+        while step <= num_steps:
+            # print(f'px={px}')
+            px[0] += stepx_px
+            px[1] += stepy_px
+
+            x += stepx_view
+            y += stepy_view
+            z += step_depth
+
+            cv.drawMarker(other, px.astype(int), (255, 255, 255))
+
+            step += 1
+
+        print(f'at end={np.array((x, y, z))}')
 
         cv.setWindowTitle('keyframe', f'keyframe={self.keyframe_id}')
         cv.setWindowTitle('other', f'other frame={self.other_id}')
