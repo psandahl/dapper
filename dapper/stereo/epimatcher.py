@@ -99,10 +99,26 @@ class EpiMatcher():
         if other_in_key[2] > 0.0:
             other_in_key_px = mat_hlp.project_image(
                 self.keyframe_K, other_in_key).astype(int)
-            cv.circle(keyframe, other_in_key_px, 2, (0, 255, 0), cv.FILLED)
+            cv.circle(keyframe, other_in_key_px, 3, (0, 255, 0), cv.FILLED)
         else:
             logger.warning(
                 f'Cannot visualize other camera, as it not is infront of camera')
+
+        # Visualize the selected pixel in the keyframe image.
+        #cv.circle(keyframe, px, 3, (255, 0, 0))
+        cv.drawMarker(keyframe, px, (255, 0, 0))
+
+        # Visualize the selected pixel at three different depths in the other image.
+        pxs = list()
+        for depth, color in [(5.0, (0, 0, 255)), (20.0, (0, 255, 0)), (35.0, (255, 0, 0))]:
+            u, v = px
+            xyz_key = mat_hlp.unproject_image(self.keyframe_K_inv, u, v, depth)
+            xyz_oth = mat_hlp.homogeneous(self.keyframe_to_other, xyz_key)
+            px_oth = mat_hlp.project_image(self.other_K, xyz_oth).astype(int)
+            cv.drawMarker(other, px_oth, color)
+            pxs.append(px_oth)
+
+        cv.line(other, pxs[0], pxs[-1], (255, 255, 255))
 
         cv.setWindowTitle('keyframe', f'keyframe={self.keyframe_id}')
         cv.setWindowTitle('other', f'other frame={self.other_id}')
