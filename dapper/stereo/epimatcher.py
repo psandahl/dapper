@@ -1,3 +1,4 @@
+from cmath import isnan
 import cv2 as cv
 import logging
 import math
@@ -17,7 +18,10 @@ class EpiMatcher():
     epipolar line.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, visualize: bool = False) -> None:
+        """
+        Construct the EpiMatcher.
+        """
         logger.debug('Construct EpiMatcher object')
 
         # Initialize the matcher with a blank state.
@@ -34,11 +38,19 @@ class EpiMatcher():
         self.other_pose = None
         self.other_K = None
 
+        self.keyframe_to_other_vec = None
         self.keyframe_to_other = None
         self.other_to_keyframe = None
 
+        self.visualize = visualize
+        self.keyframe_visual_image = None
+        self.other_visual_image = None
+
     def set_keyframe(self, frame_id: int, image: np.ndarray,
                      pose: np.ndarray, K: np.ndarray, depth_map: any) -> None:
+        """
+        Assign a new keyframe to the EpiMatcher.        
+        """
         assert img_hlp.is_image(image)
         assert img_hlp.image_channels(image) == 1
         assert isinstance(pose, np.ndarray)
@@ -58,6 +70,9 @@ class EpiMatcher():
         self.keyframe_depth_map = depth_map
 
     def match(self, frame_id: int, image: np.ndarray, pose: np.ndarray, K: np.ndarray) -> None:
+        """
+        Match the given frame against the keyframe assigned to the matcher.
+        """
         assert not self.keyframe_id is None and self.keyframe_id < frame_id
         assert img_hlp.is_image(image)
         assert img_hlp.image_channels(image) == 1
@@ -77,10 +92,18 @@ class EpiMatcher():
         self.other_pose = pose
         self.other_K = K
 
-        # Compute matrices to transform between keyframe and the other
+        # Setup stuff that relates this frame and the keyframe.
+        self.keyframe_to_other_vec = mat.decompose_pose(
+            self.other_pose)[1] - mat.decompose_pose(self.keyframe_pose)[1]
         self.other_to_keyframe = mat.relative_pose(self.keyframe_pose,
                                                    self.other_pose)
         self.keyframe_to_other = np.linalg.inv(self.other_to_keyframe)
+
+        # If visualization is active, prepare visualization images.
+        if self.visualize:
+            self.keyframe_visual_image = img_hlp.gray_to_bgr(
+                self.keyframe_image)
+            self.other_visual_image = img_hlp.gray_to_bgr(self.other_image)
 
         # Dummy for testing ... just sample one from gradients.
         index = self.keyframe_strong_gradients[len(
@@ -88,7 +111,75 @@ class EpiMatcher():
         px = img_hlp.index_to_pixel(
             img_hlp.image_size(self.keyframe_image), index)
 
-        self._visualize_epi(px)
+        self._match_pixel(px)
+
+        # self._keyframe_epiline(px)
+
+        # self._visualize_epi(px)
+
+    def _match_pixel(self, px: tuple) -> None:
+        """
+        Match the given pixel from the assigned keyframe with the new frame.
+        """
+        keyframe_epiline = self._keyframe_epiline(px)
+        if keyframe_epiline is None:
+            logger.debug(f'Failed to compute keyframe epiline for px={px}')
+            return
+
+        other_epiline = self._other_epiline(px)
+
+    def _keyframe_epiline(self, px: tuple) -> tuple:
+        """
+        Compute the epiline in terms of pixel offsets 
+        to be used in the keyframe.
+        """
+        fx = self.keyframe_K[0, 0]
+        fy = self.keyframe_K[1, 1]
+        cx = self.keyframe_K[0, 2]
+        cy = self.keyframe_K[1, 2]
+
+        x, y = px
+
+        epx = - fx * \
+            self.keyframe_to_other_vec[0] + \
+            (x - cx) * self.keyframe_to_other_vec[2]
+        epy = - fy * \
+            self.keyframe_to_other_vec[1] + \
+            (y - cy) * self.keyframe_to_other_vec[2]
+
+        if math.isnan(epx + epy):
+            return None
+
+        sample_size = 1.0
+        scale = sample_size / math.hypot(epx, epy)
+
+        return epx * scale, epy * scale
+
+    def _other_epiline(self, px: tuple) -> tuple:
+        """
+        Compute the epiline from the keyframe, in terms of
+        viewspace ray. In keyframe's frame.
+        """
+        # TODO: Fetch depth and ranges from depth map.
+        min_depth = 15
+        curr_depth = 31
+        max_depth = 38
+
+        x, y = px
+        min_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, x, y, min_depth)
+        curr_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, x, y, curr_depth)
+        max_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, x, y, max_depth)
+
+        min_epilength = np.linalg.norm(min_point)
+        curr_epilength = np.linalg.norm(curr_point)
+        max_epilength = np.linalg.norm(max_point)
+
+        epiline = min_point / min_epilength
+
+        return (epiline, min_epilength, curr_epilength, max_epilength)
 
     def _visualize_epi(self, px: tuple) -> None:
         keyframe = img_hlp.gray_to_bgr(self.keyframe_image)

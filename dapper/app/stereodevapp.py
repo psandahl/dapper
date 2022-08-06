@@ -20,7 +20,7 @@ class StereoDevApp():
         logger.debug('Construct StereoDevApp object')
 
         self.frame_id = 0
-        self.epi_matcher = EpiMatcher()
+        self.epi_matcher = EpiMatcher(visualize=True)
 
         self.keyframe_images = list()
         self.keyframe_poses = list()
@@ -54,7 +54,15 @@ class StereoDevApp():
             self.current_pose = pose
             self.current_K = K  # Assume never change.
 
-            # cv.imshow('current image', self.current_image)
+            if not self.epi_matcher.keyframe_visual_image is None:
+                cv.setWindowTitle(
+                    'keyframe', f'keyframe={self.epi_matcher.keyframe_id}')
+                cv.imshow('keyframe', self.epi_matcher.keyframe_visual_image)
+
+            if not self.epi_matcher.other_visual_image is None:
+                cv.setWindowTitle(
+                    'frame', f'frame={self.epi_matcher.other_id}')
+                cv.imshow('frame', self.epi_matcher.other_visual_image)
 
             print(f'Current frame id={self.frame_id}')
             self._print_relative_latest_keyframe()
