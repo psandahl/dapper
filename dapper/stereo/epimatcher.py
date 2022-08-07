@@ -1,4 +1,5 @@
 from cmath import isnan
+from xml.dom import NamespaceErr
 import cv2 as cv
 import logging
 import math
@@ -127,7 +128,7 @@ class EpiMatcher():
         # Compute the epiline to get target pixels from keyframe.
         target_epiline = self._compute_target_epiline(px)
         if target_epiline is None:
-            logger.debug(f'Failed to compute keyframe epiline for px={px}')
+            logger.debug(f'Failed to compute target epiline for px={px}')
             return
 
         target_epx, target_epy = target_epiline
@@ -142,6 +143,17 @@ class EpiMatcher():
             self.keyframe_to_other, np.array([0, 0, 0]))
         epi_dir = mat_hlp.homogeneous(
             self.keyframe_to_other, epiline, 0.0)
+        assert np.linalg.norm(epi_dir) > 1.0 - \
+            1e-06 and np.linalg.norm(epi_dir) < 1.0 + 1e-06
+
+        # Adjust the near and far lengths from geometric constraints.
+        adjusted_epilength = self._adjust_epilength(
+            epi_origin, epi_dir, near_length, far_length)
+        if adjusted_epilength is None:
+            logger.debug(f'Failed to adjust epilength for px={px}')
+            return
+
+        near_depth, far_length = adjusted_epilength
 
         # Get points for the three depth/epipolar lengths.
         near_point = epi_origin + epi_dir * near_length
@@ -152,8 +164,6 @@ class EpiMatcher():
 
         far_point = epi_origin + epi_dir * far_length
         far_px = mat_hlp.project_image(self.other_K, far_point)
-
-        # TODO: Check and adjust points ...
 
         # Visualization stuff.
         if self.visualize:
@@ -180,6 +190,60 @@ class EpiMatcher():
                           curr_px.astype(int), (0, 255, 0))
             cv.drawMarker(self.other_visual_image,
                           far_px.astype(int), (255, 0, 0))
+
+    def _adjust_epilength(self, epi_origin: np.ndarray, epi_dir: np.ndarray,
+                          near_length: float, far_length: float) -> tuple:
+        """
+        Adjust the epilength from geometric constraints in viewspace for
+        the other frame.
+        """
+        near = epi_origin + epi_dir * near_length
+        far = epi_origin + epi_dir * far_length
+        behind = epi_origin[2] < 0.0
+
+        min_dist = 0.1
+
+        if behind and near[2] <= min_dist:
+            theta = math.acos(np.dot(epi_dir, np.array([0.0, 0.0, 1.0])))
+
+            dist = min_dist - near[2]
+            grow = dist / math.cos(theta)
+
+            if near_length + grow >= far_length:
+                logger.debug('Near length is far than far length')
+                return None
+
+            logger.debug(f'Grow near length with={grow}')
+
+            near_length += grow
+        elif not behind and far[2] <= min_dist:
+            theta = math.acos(np.dot(epi_dir, np.array([0.0, 0.0, 1.0])))
+
+            dist = min_dist - near[2]
+            shrink = dist / math.cos(theta)
+
+            if far_length - shrink <= near_length:
+                logger.debug('Far length is near than near length')
+                return None
+
+            logger.debug(f'Shrink far length with={shrink}')
+
+            far_length -= shrink
+        elif behind and far[2] <= min_dist:
+            logger.debug(
+                'Far length cannot be adjusted when keyframe is behind')
+            return None
+        elif not behind and near[2] <= min_dist:
+            logger.debug(
+                'Near length cannot be adjusted when keyframe is in front')
+            return None
+
+        # adj_near = epi_origin + epi_dir * near_length
+        # adj_far = epi_origin + epi_dir * far_length
+        # logger.debug(f'near={near} adj near={adj_near}')
+        # logger.debug(f'far={far} adj far={adj_far}')
+
+        return near_length, far_length
 
     def _compute_target_epiline(self, px: tuple) -> tuple:
         """
