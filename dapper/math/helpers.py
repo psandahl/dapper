@@ -92,6 +92,7 @@ def homogeneous(mat: np.ndarray, xyz: np.ndarray, point: bool = True) -> np.ndar
     assert (3,) == xyz.shape
 
     xyz2 = mat @ np.append(xyz, 1.0 if point else 0.0)
-    xyz2 /= xyz2[3]
+    if point:
+        xyz2 /= xyz2[3]
 
     return xyz2[:3]

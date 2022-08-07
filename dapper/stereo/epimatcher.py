@@ -39,6 +39,7 @@ class EpiMatcher():
         self.other_K = None
 
         self.keyframe_to_other_vec = None
+        self.other_to_keyframe_vec = None
         self.keyframe_to_other = None
         self.other_to_keyframe = None
 
@@ -49,7 +50,7 @@ class EpiMatcher():
     def set_keyframe(self, frame_id: int, image: np.ndarray,
                      pose: np.ndarray, K: np.ndarray, depth_map: any) -> None:
         """
-        Assign a new keyframe to the EpiMatcher.        
+        Assign a new keyframe to the EpiMatcher.
         """
         assert img_hlp.is_image(image)
         assert img_hlp.image_channels(image) == 1
@@ -95,6 +96,7 @@ class EpiMatcher():
         # Setup stuff that relates this frame and the keyframe.
         self.keyframe_to_other_vec = mat.decompose_pose(
             self.other_pose)[1] - mat.decompose_pose(self.keyframe_pose)[1]
+
         self.other_to_keyframe = mat.relative_pose(self.keyframe_pose,
                                                    self.other_pose)
         self.keyframe_to_other = np.linalg.inv(self.other_to_keyframe)
@@ -113,24 +115,74 @@ class EpiMatcher():
 
         self._match_pixel(px)
 
-        # self._keyframe_epiline(px)
-
-        # self._visualize_epi(px)
-
     def _match_pixel(self, px: tuple) -> None:
         """
         Match the given pixel from the assigned keyframe with the new frame.
         """
+        # TODO: Fetch depth and ranges from depth map.
+        min_depth = 5
+        curr_depth = 50
+        max_depth = 100
+
+        # Get the epiline to get target pixels from keyframe.
         keyframe_epiline = self._keyframe_epiline(px)
         if keyframe_epiline is None:
             logger.debug(f'Failed to compute keyframe epiline for px={px}')
             return
 
-        other_epiline = self._other_epiline(px)
+        key_epx, key_epy = keyframe_epiline
+
+        # Get the epiline to search in the other frame. Here it is described
+        # ray with lengths in the keyframe's camera frame.
+        epiline, min_length, curr_length, max_length = self._other_epiline(
+            px, min_depth, curr_depth, max_depth)
+
+        # Transform the ray into other's camera frame.
+        keyframe_in_other = mat_hlp.homogeneous(
+            self.keyframe_to_other, np.array([0, 0, 0]))
+        epiline_in_other = mat_hlp.homogeneous(
+            self.keyframe_to_other, epiline, 0.0)
+
+        # Get points for the three depth/epipolar lengths.
+        min_point = keyframe_in_other + epiline_in_other * min_length
+        min_px = mat_hlp.project_image(self.other_K, min_point)
+
+        curr_point = keyframe_in_other + epiline_in_other * curr_length
+        curr_px = mat_hlp.project_image(self.other_K, curr_point)
+
+        max_point = keyframe_in_other + epiline_in_other * max_length
+        max_px = mat_hlp.project_image(self.other_K, max_point)
+
+        # TODO: Check and adjust points ...
+
+        # Visualization stuff.
+        if self.visualize:
+            # Pixel in keyframe.
+            cv.drawMarker(self.keyframe_visual_image, px, (0, 255, 0))
+
+            # Epiline in keyframe, prolonged for visualization.
+            u, v = px
+
+            key_epi_start = (int(u - 20 * key_epx), int(v - 20 * key_epy))
+            key_epi_end = (int(u + 20 * key_epx), int(v + 20 * key_epy))
+            cv.line(self.keyframe_visual_image, key_epi_start,
+                    key_epi_end, (255, 255, 255))
+
+            # Epiline in other
+            cv.line(self.other_visual_image, min_px.astype(
+                int), max_px.astype(int), (255, 255, 255))
+
+            # Min, curr and max in other.
+            cv.drawMarker(self.other_visual_image,
+                          min_px.astype(int), (0, 0, 255))
+            cv.drawMarker(self.other_visual_image,
+                          curr_px.astype(int), (0, 255, 0))
+            cv.drawMarker(self.other_visual_image,
+                          max_px.astype(int), (255, 0, 0))
 
     def _keyframe_epiline(self, px: tuple) -> tuple:
         """
-        Compute the epiline in terms of pixel offsets 
+        Compute the epiline in terms of pixel offsets
         to be used in the keyframe.
         """
         fx = self.keyframe_K[0, 0]
@@ -155,16 +207,11 @@ class EpiMatcher():
 
         return epx * scale, epy * scale
 
-    def _other_epiline(self, px: tuple) -> tuple:
+    def _other_epiline(self, px: tuple, min_depth: float, curr_depth: float, max_depth: float) -> tuple:
         """
         Compute the epiline from the keyframe, in terms of
         viewspace ray. In keyframe's frame.
         """
-        # TODO: Fetch depth and ranges from depth map.
-        min_depth = 15
-        curr_depth = 31
-        max_depth = 38
-
         x, y = px
         min_point = mat_hlp.unproject_image(
             self.keyframe_K_inv, x, y, min_depth)
@@ -197,7 +244,7 @@ class EpiMatcher():
                 f'Cannot visualize other camera, as it not is infront of camera')
 
         # Visualize the selected pixel in the keyframe image.
-        #cv.circle(keyframe, px, 3, (255, 0, 0))
+        # cv.circle(keyframe, px, 3, (255, 0, 0))
         cv.drawMarker(keyframe, px, (255, 0, 0))
 
         # Mid coordinate in other image.
