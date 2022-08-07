@@ -124,17 +124,17 @@ class EpiMatcher():
         curr_depth = 50
         far_depth = 100
 
-        # Get the epiline to get target pixels from keyframe.
-        target_epiline = self._target_epiline(px)
+        # Compute the epiline to get target pixels from keyframe.
+        target_epiline = self._compute_target_epiline(px)
         if target_epiline is None:
             logger.debug(f'Failed to compute keyframe epiline for px={px}')
             return
 
         target_epx, target_epy = target_epiline
 
-        # Get the epiline to search in the other frame. Here it is described
-        # ray with lengths in the keyframe's camera frame.
-        epiline, near_length, curr_length, far_length = self._search_epiline(
+        # Compute the epiline to search in the other frame. Here it is described
+        # as a ray with lengths,  in the keyframe's camera frame.
+        epiline, near_length, curr_length, far_length = self._compute_search_epiline(
             px, near_depth, curr_depth, far_depth)
 
         # Transform the ray into other's camera frame.
@@ -181,7 +181,7 @@ class EpiMatcher():
             cv.drawMarker(self.other_visual_image,
                           far_px.astype(int), (255, 0, 0))
 
-    def _target_epiline(self, px: tuple) -> tuple:
+    def _compute_target_epiline(self, px: tuple) -> tuple:
         """
         Compute the epiline in terms of pixel offsets
         to be used in the keyframe.
@@ -208,7 +208,8 @@ class EpiMatcher():
 
         return epx * scale, epy * scale
 
-    def _search_epiline(self, px: tuple, near_depth: float, curr_depth: float, far_depth: float) -> tuple:
+    def _compute_search_epiline(self, px: tuple, near_depth: float,
+                                curr_depth: float, far_depth: float) -> tuple:
         """
         Compute the epiline from the keyframe, in terms of
         viewspace ray. In keyframe's frame.
