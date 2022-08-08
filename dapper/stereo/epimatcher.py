@@ -1,5 +1,4 @@
 from cmath import isnan
-from xml.dom import NamespaceErr
 import cv2 as cv
 import logging
 import math
@@ -108,22 +107,132 @@ class EpiMatcher():
                 self.keyframe_image)
             self.other_visual_image = img_hlp.gray_to_bgr(self.other_image)
 
+        # Bugs ... try find why things project incorrectly.
+        #p0 = np.array([0, 0, 3.0])
+        #p1 = np.array([0, 0, 9.0])
+        #p2 = np.array([0, 0, 27.0])
+        # ds = [10, 100, 1000]
+        # cs = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]
+        # u = 100
+        # v = 200
+
+        # for depth, col in zip(ds, cs):
+        #     p_key = mat_hlp.unproject_image(self.keyframe_K_inv, u, v, depth)
+
+        #     px_key = mat_hlp.project_image(self.keyframe_K, p_key)
+        #     p_oth = mat_hlp.homogeneous(self.keyframe_to_other, p_key)
+        #     px_oth = mat_hlp.project_image(self.other_K, p_oth)
+
+        #     print(f'p_key={p_key}')
+        #     print(f'p_oth={p_oth}')
+        #     print(f'px_key={px_key}')
+        #     print(f'px_oth={px_oth}')
+
+        #     cv.drawMarker(self.keyframe_visual_image, px_key.astype(int), col)
+
+        #     if p_oth[2] > 0.0:
+        #         cv.drawMarker(self.other_visual_image, px_oth.astype(int), col)
+
         # Dummy for testing ... just sample one from gradients.
         index = self.keyframe_strong_gradients[len(
-            self.keyframe_strong_gradients) // 2]
+            self.keyframe_strong_gradients) // 7]
         px = img_hlp.index_to_pixel(
             img_hlp.image_size(self.keyframe_image), index)
 
-        self._match_pixel(px)
+        self._search_epiline(px)
+
+        # self._match_pixel(px)
+        # self._visualize_epi(px)
+
+    def _search_epiline(self, px: tuple) -> None:
+        samples = self._epiline_samples(px)
+        if samples is None:
+            logger.debug(
+                f'Failed to extract search epiline samples for px={px}')
+            return
+
+        if self.visualize:
+            # Visualization in keyframe: marker for selected pixel
+            # and circle for epipole.
+            cv.drawMarker(self.keyframe_visual_image, px, (0, 255, 0))
+
+            other = mat_hlp.homogeneous(
+                self.other_to_keyframe, np.array([0, 0, 0]))
+            epipole_key = mat_hlp.project_image(self.keyframe_K, other)
+            cv.circle(self.keyframe_visual_image, epipole_key.astype(int),
+                      3, (0, 255, 255), cv.FILLED)
+
+            # Visualization in other frame: markers for the depth samples,
+            # epipolar line from epipole to near point.
+            near, mean, far = samples
+
+            near_px = mat_hlp.project_image(self.other_K, near)
+            mean_px = mat_hlp.project_image(self.other_K, mean)
+            far_px = mat_hlp.project_image(self.other_K, far)
+
+            keyframe = mat_hlp.homogeneous(
+                self.keyframe_to_other, np.array([0, 0, 0]))
+            if math.isclose(keyframe[2], 0.0, abs_tol=1e-9):
+                # Hack for horizontal stereo.
+                keyframe[2] = 1e-8
+            epipole_oth = mat_hlp.project_image(self.other_K, keyframe)
+
+            cv.circle(self.other_visual_image, epipole_oth.astype(int),
+                      3, (0, 255, 255), cv.FILLED)
+
+            cv.line(self.other_visual_image, near_px.astype(int),
+                    epipole_oth.astype(int), (255, 255, 255))
+            cv.drawMarker(self.other_visual_image,
+                          near_px.astype(int), (0, 0, 255))
+            cv.drawMarker(self.other_visual_image,
+                          mean_px.astype(int), (0, 255, 0))
+            cv.drawMarker(self.other_visual_image,
+                          far_px.astype(int), (255, 0, 0))
+
+    def _epiline_samples(self, px: tuple) -> tuple:
+        # TODO: Fetch real depth.
+        near_depth = 5
+        mean_depth = 25
+        far_depth = 250
+
+        # Pick points from the keyframe's depth distribution for this pixel.
+        u, v = px
+        near_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, u, v, near_depth)
+        mean_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, u, v, mean_depth)
+        far_point = mat_hlp.unproject_image(
+            self.keyframe_K_inv, u, v, far_depth)
+
+        # Transform to the other frame's camera frame.
+        near_point = mat_hlp.homogeneous(self.keyframe_to_other, near_point)
+        mean_point = mat_hlp.homogeneous(self.keyframe_to_other, mean_point)
+        far_point = mat_hlp.homogeneous(self.keyframe_to_other, far_point)
+
+        # Check and adjust samples. If both near is behind the image plane
+        # there's no way to adjust.
+        if near_point[2] < 0 and far_point[2] < 0:
+            logger.debug('All epiline samples are behind camera')
+            return None
+
+        # Get the keyframe's position, transformed to this frame.
+        keyframe = mat_hlp.homogeneous(
+            self.keyframe_to_other, np.array([0, 0, 0]))
+        behind = keyframe[2] < 0
+
+        logger.debug(
+            f'near z={near_point[2]} mean z={mean_point[2]} far z={far_point[2]}')
+
+        return near_point, mean_point, far_point
 
     def _match_pixel(self, px: tuple) -> None:
         """
         Match the given pixel from the assigned keyframe with the new frame.
         """
         # TODO: Fetch depth and ranges from depth map.
-        near_depth = 5
+        near_depth = 1
         curr_depth = 50
-        far_depth = 100
+        far_depth = 250
 
         # Compute the epiline to get target pixels from keyframe.
         target_epiline = self._compute_target_epiline(px)
@@ -267,6 +376,9 @@ class EpiMatcher():
         if math.isnan(epx + epy):
             return None
 
+        print(f'keyframe_to_other={self.keyframe_to_other_vec}')
+        print(f'epx={epx:.2f} epy={epy:.2f}')
+
         sample_size = 1.0
         scale = sample_size / math.hypot(epx, epy)
 
@@ -318,7 +430,7 @@ class EpiMatcher():
         cv.circle(other, mid_px.astype(int), 3, (0, 255, 0), cv.FILLED)
 
         min_depth = 5.0
-        max_depth = 50.0
+        max_depth = 100.0
 
         u, v = px
         near = mat_hlp.homogeneous(self.keyframe_to_other,
@@ -349,6 +461,8 @@ class EpiMatcher():
 
         cv.drawMarker(other, near_px.astype(int), (0, 0, 255))
         cv.drawMarker(other, far_px.astype(int), (255, 0, 0))
+        cv.line(other, near_px.astype(int),
+                far_px.astype(int), (255, 255, 255))
 
         radiusx_view = far[0] - near[0]
         radiusy_view = far[1] - near[1]
@@ -360,25 +474,25 @@ class EpiMatcher():
         depth_range = max_depth - min_depth
         step_depth = depth_range / num_steps
 
-        step = 0
-        px = near_px
-        x = near[0]
-        y = near[1]
-        z = near[2]
-        while step <= num_steps:
-            # print(f'px={px}')
-            px[0] += stepx_px
-            px[1] += stepy_px
+        # step = 0
+        # px = near_px
+        # x = near[0]
+        # y = near[1]
+        # z = near[2]
+        # while step <= num_steps:
+        #     # print(f'px={px}')
+        #     px[0] += stepx_px
+        #     px[1] += stepy_px
 
-            x += stepx_view
-            y += stepy_view
-            z += step_depth
+        #     x += stepx_view
+        #     y += stepy_view
+        #     z += step_depth
 
-            cv.drawMarker(other, px.astype(int), (255, 255, 255))
+        #     cv.drawMarker(other, px.astype(int), (255, 255, 255))
 
-            step += 1
+        #     step += 1
 
-        print(f'at end={np.array((x, y, z))}')
+        # print(f'at end={np.array((x, y, z))}')
 
         cv.setWindowTitle('keyframe', f'keyframe={self.keyframe_id}')
         cv.setWindowTitle('other', f'other frame={self.other_id}')
