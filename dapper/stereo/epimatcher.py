@@ -8,6 +8,7 @@ import dapper.image.gradient as gr
 import dapper.image.helpers as img_hlp
 import dapper.math.matrix as mat
 import dapper.math.helpers as mat_hlp
+from dapper.math.ray import Ray
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class EpiMatcher():
         # self._visualize_epi(px)
 
     def _search_epiline(self, px: tuple) -> None:
-        samples = self._epiline_samples(px)
+        samples = self._epiline_ray(px)
         if samples is None:
             logger.debug(
                 f'Failed to extract search epiline samples for px={px}')
@@ -164,11 +165,14 @@ class EpiMatcher():
 
             # Visualization in other frame: markers for the depth samples,
             # epipolar line from epipole to near point.
-            near, mean, far = samples
+            ray, near_distance, mean_distance, far_distance = samples
 
-            near_px = mat_hlp.project_image(self.other_K, near)
-            mean_px = mat_hlp.project_image(self.other_K, mean)
-            far_px = mat_hlp.project_image(self.other_K, far)
+            near_px = mat_hlp.project_image(
+                self.other_K, ray.point_at(near_distance))
+            mean_px = mat_hlp.project_image(
+                self.other_K, ray.point_at(mean_distance))
+            far_px = mat_hlp.project_image(
+                self.other_K, ray.point_at(far_distance))
 
             keyframe = mat_hlp.homogeneous(
                 self.keyframe_to_other, np.array([0, 0, 0]))
@@ -189,7 +193,7 @@ class EpiMatcher():
             cv.drawMarker(self.other_visual_image,
                           far_px.astype(int), (255, 0, 0))
 
-    def _epiline_samples(self, px: tuple) -> tuple:
+    def _epiline_ray(self, px: tuple) -> tuple:
         # TODO: Fetch real depth.
         near_depth = 5
         mean_depth = 25
@@ -204,26 +208,26 @@ class EpiMatcher():
         far_point = mat_hlp.unproject_image(
             self.keyframe_K_inv, u, v, far_depth)
 
-        # Transform to the other frame's camera frame.
+        # Transform to other's frame.
         near_point = mat_hlp.homogeneous(self.keyframe_to_other, near_point)
         mean_point = mat_hlp.homogeneous(self.keyframe_to_other, mean_point)
         far_point = mat_hlp.homogeneous(self.keyframe_to_other, far_point)
 
-        # Check and adjust samples. If both near is behind the image plane
-        # there's no way to adjust.
+        # If both near is behind the image plane, just give up.
         if near_point[2] < 0 and far_point[2] < 0:
             logger.debug('All epiline samples are behind camera')
             return None
 
-        # Get the keyframe's position, transformed to this frame.
-        keyframe = mat_hlp.homogeneous(
+        origin = mat_hlp.homogeneous(
             self.keyframe_to_other, np.array([0, 0, 0]))
-        behind = keyframe[2] < 0
 
-        logger.debug(
-            f'near z={near_point[2]} mean z={mean_point[2]} far z={far_point[2]}')
+        near_distance = Ray.distance(origin, near_point)
+        mean_distance = Ray.distance(origin, mean_point)
+        far_distance = Ray.distance(origin, far_point)
 
-        return near_point, mean_point, far_point
+        ray = Ray(origin, far_point)
+
+        return ray, near_distance, mean_distance, far_distance
 
     def _match_pixel(self, px: tuple) -> None:
         """
