@@ -149,7 +149,7 @@ class EpiMatcher():
         samples = self._epiline_ray(px)
         if samples is None:
             logger.debug(
-                f'Failed to extract search epiline samples for px={px}')
+                f'Failed to extract search epiline for px={px}')
             return
 
         if self.visualize:
@@ -226,6 +226,24 @@ class EpiMatcher():
         far_distance = Ray.distance(origin, far_point)
 
         ray = Ray(origin, far_point)
+
+        # Check if the near or far distance must be changed.
+        behind = origin[2] < 0
+        if behind and near_point[2] < 0:
+            offset = 1e-05 - near_point[2]
+            grow = offset / math.cos(ray.angle(np.array([0, 0, 1])))
+
+            logger.debug(f'Near was behind camera, grow distance with={grow}')
+
+            near_distance += grow
+        elif not behind and far_point[2] < 0:
+            offset = 1e-05 - far_point[2]
+            shrink = offset / math.cos(ray.angle(np.array([0, 0, -1])))
+
+            logger.debug(
+                f'Far was behind camera, shrink distance with={shrink}')
+
+            far_distance += shrink
 
         return ray, near_distance, mean_distance, far_distance
 

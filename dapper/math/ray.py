@@ -1,4 +1,5 @@
 import logging
+import math
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,26 @@ class Ray():
             The point.
         """
         return self.origin + self.direction * distance
+
+    def angle(self, direction: any) -> float:
+        """
+        Compute the relative angle between ray and another direction.
+
+        Parameters:
+            direction: Another direction (ray or 3d vector).
+
+        Returns:
+            Angle in radians.
+        """
+        dir = None
+        if isinstance(direction, Ray):
+            dir = direction.direction
+        elif isinstance(direction, np.ndarray) and (3,) == direction.shape:
+            dir = direction / np.linalg.norm(direction)
+        else:
+            raise TypeError('Ray or 3d vector expected')
+
+        return math.acos(np.dot(self.direction, dir))
 
     @staticmethod
     def distance(point0: np.ndarray, point1: np.ndarray) -> float:
