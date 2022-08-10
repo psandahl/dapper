@@ -6,6 +6,7 @@ import numpy as np
 
 import dapper.image.gradient as gr
 import dapper.image.helpers as img_hlp
+from dapper.image.line import Line
 import dapper.math.matrix as mat
 import dapper.math.helpers as mat_hlp
 from dapper.math.ray import Ray
@@ -146,10 +147,25 @@ class EpiMatcher():
         # self._visualize_epi(px)
 
     def _search_epiline(self, px: tuple) -> None:
+        # Get near, mean and far samples along the epipolar ray.
         samples = self._epiline_ray(px)
         if samples is None:
             logger.debug(
-                f'Failed to extract search epiline for px={px}')
+                f'Failed to extract epipolar ray for px={px}')
+            return
+
+        ray, near_distance, mean_distance, far_distance = samples
+
+        # Project the near and far distances to image positions
+        # in the 'other' frame.
+        near_px = mat_hlp.project_image(
+            self.other_K, ray.point_at(near_distance))
+        far_px = mat_hlp.project_image(
+            self.other_K, ray.point_at(far_distance))
+
+        epiline = Line(near_px, far_px, img_hlp.image_size(self.other_image))
+        if not epiline.ok:
+            logger.debug(f'Failed to extract epipolar line for px={px})')
             return
 
         if self.visualize:
@@ -165,14 +181,8 @@ class EpiMatcher():
 
             # Visualization in other frame: markers for the depth samples,
             # epipolar line from epipole to near point.
-            ray, near_distance, mean_distance, far_distance = samples
-
-            near_px = mat_hlp.project_image(
-                self.other_K, ray.point_at(near_distance))
             mean_px = mat_hlp.project_image(
                 self.other_K, ray.point_at(mean_distance))
-            far_px = mat_hlp.project_image(
-                self.other_K, ray.point_at(far_distance))
 
             keyframe = mat_hlp.homogeneous(
                 self.keyframe_to_other, np.array([0, 0, 0]))
