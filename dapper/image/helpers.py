@@ -64,22 +64,23 @@ def image_channels(image: np.ndarray) -> int:
         return 1
 
 
-def within_image_extent(image_size: tuple, x: int, y: int, border: int = 0) -> bool:
+def within_image_extent(image_size: tuple, px: any, border: int = 0) -> bool:
     """
     Check that an image coordinate is within the extent of the image.
 
     Parameters:
         image_size: Tuple (width, height).
-        x: x image coordinate.
-        y: y image coordinate.
+        px: Tuple or array (x, y).
         border: Extra border inside of image.
 
     Returns:
         True if the coordinate is within the image (+border).
     """
     assert len(image_size) == 2
+    assert len(px) == 2
 
     w, h = image_size
+    x, y = px
     return (x - border) >= 0 and (x + border) < w and (y - border) >= 0 and (y + border) < h
 
 
@@ -96,7 +97,7 @@ def pixel_to_index(image_size: tuple, x: int, y: int) -> int:
         Image index.
     """
     assert len(image_size) == 2
-    assert within_image_extent(image_size, x, y)
+    assert within_image_extent(image_size, (x, y))
 
     w, _ = image_size
     return y * w + x

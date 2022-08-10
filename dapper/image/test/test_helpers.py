@@ -54,17 +54,17 @@ class HelpersTest(unittest.TestCase):
         """
         image_size = (30, 20)
 
-        self.assertTrue(hlp.within_image_extent(image_size, 0, 0))
-        self.assertTrue(hlp.within_image_extent(image_size, 29, 19))
-        self.assertTrue(hlp.within_image_extent(image_size, 0, 0))
-        self.assertTrue(hlp.within_image_extent(image_size, 15, 10))
+        self.assertTrue(hlp.within_image_extent(image_size, (0, 0)))
+        self.assertTrue(hlp.within_image_extent(image_size, (29, 19)))
+        self.assertTrue(hlp.within_image_extent(image_size, (0, 0)))
+        self.assertTrue(hlp.within_image_extent(image_size, (15, 10)))
 
-        self.assertFalse(hlp.within_image_extent(image_size, 30, 19))
-        self.assertFalse(hlp.within_image_extent(image_size, 29, 20))
-        self.assertFalse(hlp.within_image_extent(image_size, -1, -1))
+        self.assertFalse(hlp.within_image_extent(image_size, (30, 19)))
+        self.assertFalse(hlp.within_image_extent(image_size, (29, 20)))
+        self.assertFalse(hlp.within_image_extent(image_size, (-1, -1)))
 
-        self.assertFalse(hlp.within_image_extent(image_size, 0, 0, 1))
-        self.assertFalse(hlp.within_image_extent(image_size, 29, 19, 1))
+        self.assertFalse(hlp.within_image_extent(image_size, (0, 0), 1))
+        self.assertFalse(hlp.within_image_extent(image_size, (29, 19), 1))
 
     def test_pixel_to_index(self):
         """

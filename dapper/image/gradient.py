@@ -22,7 +22,7 @@ def pixel_gradient(image: np.ndarray, x: int, y: int) -> np.ndarray:
     """
     assert hlp.is_image(image)
     assert hlp.image_channels(image) == 1
-    assert hlp.within_image_extent(hlp.image_size(image), x, y, 1)
+    assert hlp.within_image_extent(hlp.image_size(image), (x, y), 1)
 
     east = float(image[y, x + 1])
     west = float(image[y, x - 1])
