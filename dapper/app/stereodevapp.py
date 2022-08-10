@@ -21,6 +21,9 @@ class StereoDevApp():
 
         self.frame_id = 0
         self.epi_matcher = EpiMatcher(visualize=True)
+        if self.epi_matcher.visualize:
+            cv.namedWindow('keyframe')
+            cv.namedWindow('frame')
 
         self.keyframe_images = list()
         self.keyframe_poses = list()
