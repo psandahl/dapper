@@ -42,6 +42,9 @@ class Line():
         self.gradient = end - begin
         self.gradient = self.gradient / np.linalg.norm(self.gradient)
 
+        print(f'begin={begin} end={end} gradient={self.gradient}')
+
+        # TODO: Take a bigger jump if far outside?
         while not hlp.within_image_extent(size, self.point_at(self.min_distance), border) \
                 and self.min_distance < self.max_distance:
             self.min_distance += self.step_size

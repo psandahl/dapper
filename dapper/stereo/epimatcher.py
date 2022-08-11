@@ -155,18 +155,23 @@ class EpiMatcher():
             return
 
         ray, near_distance, mean_distance, far_distance = samples
+        near = ray.point_at(near_distance)
+        far = ray.point_at(far_distance)
+
+        print(f'near={near} far={far}')
 
         # Project the near and far distances to image positions
         # in the 'other' frame.
-        near_px = mat_hlp.project_image(
-            self.other_K, ray.point_at(near_distance))
-        far_px = mat_hlp.project_image(
-            self.other_K, ray.point_at(far_distance))
+        near_px = mat_hlp.project_image(self.other_K, near)
+        far_px = mat_hlp.project_image(self.other_K, far)
 
         epiline = Line(near_px, far_px, img_hlp.image_size(self.other_image))
         if not epiline.ok:
             logger.debug(f'Failed to extract epipolar line for px={px})')
             return
+
+        print(
+            f'near_px={epiline.point_at(epiline.min_distance)} far_px={epiline.point_at(epiline.max_distance)}')
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
@@ -238,16 +243,20 @@ class EpiMatcher():
         ray = Ray(origin, far_point)
 
         # Check if the near or far distance must be changed.
+
+        # TODO: Fix to to avoid to long image lines. Fix some sort
+        # of frustum culling.
+        margin = 1e-01
         behind = origin[2] < 0
         if behind and near_point[2] < 0:
-            offset = 1e-05 - near_point[2]
+            offset = margin - near_point[2]
             grow = offset / math.cos(ray.angle(np.array([0, 0, 1])))
 
             logger.debug(f'Near was behind camera, grow distance with={grow}')
 
             near_distance += grow
         elif not behind and far_point[2] < 0:
-            offset = 1e-05 - far_point[2]
+            offset = margin - far_point[2]
             shrink = offset / math.cos(ray.angle(np.array([0, 0, -1])))
 
             logger.debug(
