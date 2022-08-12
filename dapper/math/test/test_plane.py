@@ -26,6 +26,15 @@ class TestPlane(unittest.TestCase):
         p = np.array([1, 2, 3])
         self.assertAlmostEqual(pl.distance_to(plane, p), -2)
 
+    def test_infront_of(self):
+        plane = pl.plane(np.array([0, 0, 1]), 10)
+        self.assertFalse(pl.infront_of(plane, np.array([1, 2, 9])))
+        self.assertTrue(pl.infront_of(plane, np.array([1, 2, 11])))
+
+        plane = pl.plane(np.array([0, 0, -1]), -10)
+        self.assertTrue(pl.infront_of(plane, np.array([1, 2, 9])))
+        self.assertFalse(pl.infront_of(plane, np.array([1, 2, 11])))
+
     def test_ray_does_intersect(self):
         plane = pl.plane(np.array([0, 0, 1]), 0)
 

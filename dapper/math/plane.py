@@ -1,3 +1,4 @@
+import dapper.math.helpers as mat_hlp
 from dapper.math.ray import Ray
 import logging
 import numpy as np
@@ -11,7 +12,7 @@ def plane(direction: np.ndarray, distance: float) -> np.ndarray:
 
     Parameters:
         direction: The direction of the plane.
-        distance: Distance from origo.
+        distance: Distance from origo along the direction.
 
     Returns:
         A plane as array [normal, distance].
@@ -19,7 +20,7 @@ def plane(direction: np.ndarray, distance: float) -> np.ndarray:
     assert isinstance(direction, np.ndarray)
     assert (3,) == direction.shape
 
-    return np.append(direction / np.linalg.norm(direction), distance)
+    return np.append(mat_hlp.normalize(direction), distance)
 
 
 def distance_to(plane: np.ndarray, point: np.ndarray) -> float:
@@ -41,6 +42,20 @@ def distance_to(plane: np.ndarray, point: np.ndarray) -> float:
     assert (3,) == point.shape
 
     return np.dot(point, plane[:3]) - plane[3]
+
+
+def infront_of(plane: np.ndarray, point: np.ndarray) -> bool:
+    """
+    Check if a point is infront of a plane.
+
+    Parameters:
+        plane: The plane
+        point: The point.
+
+    Returns:
+        True if infront of, False otherwise.
+    """
+    return distance_to(plane, point) > 0.0
 
 
 def raycast(plane: np.ndarray, ray: Ray) -> float:

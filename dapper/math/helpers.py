@@ -24,7 +24,7 @@ def ideal_intrinsic_matrix(image_size: tuple, fov: float) -> np.ndarray:
     cx = (w - 1) / 2.0
     cy = (h - 1) / 2.0
 
-    mat = [fx, 0, cx, 0, fy, 0, 0, 0, 1]
+    mat = [fx, 0, cx, 0, fy, cy, 0, 0, 1]
 
     return np.array(mat, dtype=np.float64).reshape(3, 3)
 
@@ -96,3 +96,9 @@ def homogeneous(mat: np.ndarray, xyz: np.ndarray, point: bool = True) -> np.ndar
         xyz2 /= xyz2[3]
 
     return xyz2[:3]
+
+
+def normalize(vec: np.ndarray) -> np.ndarray:
+    assert isinstance(vec, np.ndarray)
+
+    return vec / np.linalg.norm(vec)
