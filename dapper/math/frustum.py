@@ -4,6 +4,7 @@ import numpy as np
 import dapper.common.settings as settings
 import dapper.math.helpers as img_hlp
 import dapper.math.plane as plane
+from dapper.math.ray import Ray
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +61,41 @@ class Frustum():
             plane.infront_of(self.bottom, point) and \
             plane.infront_of(self.left, point) and \
             plane.infront_of(self.right, point)
+
+    def intersect_inside(self, ray: Ray) -> float:
+        """
+        Intersect a ray (given its origin is inside the frustum)
+        with the frustum boundaries.
+
+        Parmeters:
+            ray: The ray.
+
+        Returns:
+            The distance to frustum border, or None.
+        """
+        assert isinstance(ray, Ray)
+
+        if not self.contains(ray.origin):
+            return None
+
+        planes = [self.near, self.far, self.top,
+                  self.bottom, self.left, self.right]
+        for p in planes:
+            t = plane.raycast(p, ray)
+            if not t is None:
+                return t - 1e-09
+
+        return None
+
+    def clamp_ray_inside(self, ray: Ray, near: float, far: float) -> tuple:
+        assert isinstance(ray, Ray)
+
+        if self.contains(ray.point_at(near)) and self.contains(ray.point_at(far)):
+            # Simplest case: both near and far are inside the frustum.
+            return near, far
+        elif self.contains(ray.origin) and self.contains(ray.point_at(near)) \
+                and not self.contains(ray.point_at(far)):
+            pass
+
+        # A case we do not solve. Return None.
+        return None

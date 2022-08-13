@@ -12,15 +12,18 @@ def ideal_intrinsic_matrix(image_size: tuple, fov: float) -> np.ndarray:
 
     Parameters:
         image_size: Tuple (width, height).
-        fov: Horizontal field of view, in degrees.
+        fov_h: Horizontal field of view, in degrees.
     """
     assert len(image_size) == 2
 
     w, h = image_size
-    fov = math.radians(fov)
+    aspect = w / h
 
-    fx = (w / 2.0) / math.tan(fov / 2.0)
-    fy = fx
+    fov_h = math.radians(fov)
+    fov_v = 2.0 * math.atan2(math.tan(fov_h / 2.0) / aspect, 1.0)
+
+    fx = ((w - 1) / 2.0) / math.tan(fov_h / 2.0)
+    fy = ((h - 1) / 2.0) / math.tan(fov_v / 2.0)
     cx = (w - 1) / 2.0
     cy = (h - 1) / 2.0
 
