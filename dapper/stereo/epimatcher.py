@@ -4,6 +4,7 @@ import logging
 import math
 import numpy as np
 
+from dapper.math.frustum import Frustum
 import dapper.image.gradient as gr
 import dapper.image.helpers as img_hlp
 from dapper.image.line import Line
@@ -39,6 +40,7 @@ class EpiMatcher():
         self.other_image = None
         self.other_pose = None
         self.other_K = None
+        self.other_frustum = None
 
         self.keyframe_to_other_vec = None
         self.other_to_keyframe_vec = None
@@ -94,6 +96,8 @@ class EpiMatcher():
         self.other_image = image
         self.other_pose = pose
         self.other_K = K
+        self.other_frustum = Frustum(
+            np.linalg.inv(K), img_hlp.image_size(image))
 
         # Setup stuff that relates this frame and the keyframe.
         self.keyframe_to_other_vec = mat.decompose_pose(
@@ -228,7 +232,7 @@ class EpiMatcher():
         mean_point = mat_hlp.homogeneous(self.keyframe_to_other, mean_point)
         far_point = mat_hlp.homogeneous(self.keyframe_to_other, far_point)
 
-        # If both near is behind the image plane, just give up.
+        # If both near and far is behind the image plane, just give up.
         if near_point[2] < 0 and far_point[2] < 0:
             logger.debug('All epiline samples are behind camera')
             return None
@@ -240,29 +244,15 @@ class EpiMatcher():
         mean_distance = Ray.distance(origin, mean_point)
         far_distance = Ray.distance(origin, far_point)
 
+        # Clamp the ray to the frustum.
         ray = Ray(origin, far_point)
+        distances = self.other_frustum.clamp_ray(
+            ray, near_distance, far_distance)
+        if distances is None:
+            logger.debug('Failed to clamp ray to frustum')
+            return None
 
-        # Check if the near or far distance must be changed.
-
-        # TODO: Fix to to avoid to long image lines. Fix some sort
-        # of frustum culling.
-        margin = 1e-01
-        behind = origin[2] < 0
-        if behind and near_point[2] < 0:
-            offset = margin - near_point[2]
-            grow = offset / math.cos(ray.angle(np.array([0, 0, 1])))
-
-            logger.debug(f'Near was behind camera, grow distance with={grow}')
-
-            near_distance += grow
-        elif not behind and far_point[2] < 0:
-            offset = margin - far_point[2]
-            shrink = offset / math.cos(ray.angle(np.array([0, 0, -1])))
-
-            logger.debug(
-                f'Far was behind camera, shrink distance with={shrink}')
-
-            far_distance += shrink
+        near_distance, far_distance = distances
 
         return ray, near_distance, mean_distance, far_distance
 
