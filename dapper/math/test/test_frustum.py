@@ -139,3 +139,32 @@ class TestFrustum(unittest.TestCase):
         ray = Ray(origin, origin + np.array([0.0, 1.0, 0.0]))
         t = frustum.intersect_inside(ray)
         self.assertAlmostEqual(t, dist)
+
+        # Not intersect.
+        origin = np.array([10.0, 0.0, 1.0])
+        ray = Ray(origin, origin + np.array([0, 0, -1.0]))
+        t = frustum.intersect_inside(ray)
+        self.assertIsNone(t)
+
+    def test_frustum_intersect_outside(self):
+        w = 1024.0
+        h = 768.0
+        half_fov = 20.0
+
+        image_size = (w, h)
+        K_inv = np.linalg.inv(
+            mat_hlp.ideal_intrinsic_matrix(image_size, half_fov * 2.0))
+
+        frustum = Frustum(K_inv, image_size)
+
+        # Setup where the intended hit is the right plane.
+        origin = np.array([10.0, 0.0, -1.0])
+        ray = Ray(origin, np.array([0, 0, 10.0]))
+        t = frustum.intersect_outside(ray)
+        self.assertAlmostEqual(t, 11.0022205)  # Hard coded.
+
+        # Not intersect.
+        origin = np.array([0, 0, 286.7])
+        ray = Ray(origin, origin + np.array([0, 0, -1.0]))
+        t = frustum.intersect_outside(ray)
+        self.assertIsNone(t)
