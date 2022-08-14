@@ -135,10 +135,9 @@ class EpiMatcher():
         near = ray.point_at(near_distance)
         far = ray.point_at(far_distance)
 
-        print(f'near={near} far={far}')
-
         # Project the near and far distances to image positions
-        # in the 'other' frame.
+        # in the 'other' frame, in order to get an epipolar line
+        # in the image to search.
         near_px = mat_hlp.project_image(self.other_K, near)
         far_px = mat_hlp.project_image(self.other_K, far)
 
@@ -147,43 +146,42 @@ class EpiMatcher():
             logger.debug(f'Failed to extract epipolar line for px={px})')
             return
 
-        print(
-            f'near_px={epiline.point_at(epiline.min_distance)} far_px={epiline.point_at(epiline.max_distance)}')
-
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
             # and circle for epipole.
-            cv.drawMarker(self.keyframe_visual_image, px, (0, 255, 0))
-
-            other = mat_hlp.homogeneous(
+            other_in_key = mat_hlp.homogeneous(
                 self.other_to_keyframe, np.array([0, 0, 0]))
-            epipole_key = mat_hlp.project_image(self.keyframe_K, other)
-            cv.circle(self.keyframe_visual_image, epipole_key.astype(int),
+            if math.isclose(other_in_key[2], 0.0, abs_tol=1e-9):
+                # Hack for horizontal stereo.
+                other_in_key[2] = 1e-8
+            epipole_key_px = mat_hlp.project_image(
+                self.keyframe_K, other_in_key)
+
+            cv.line(self.keyframe_visual_image, px, epipole_key_px.astype(int),
+                    (128, 128, 128))
+            cv.drawMarker(self.keyframe_visual_image, px, (0, 255, 0))
+            cv.circle(self.keyframe_visual_image, epipole_key_px.astype(int),
                       3, (0, 255, 255), cv.FILLED)
 
             # Visualization in other frame: markers for the depth samples,
             # epipolar line from epipole to near point.
-            mean_px = mat_hlp.project_image(
-                self.other_K, ray.point_at(mean_distance))
 
-            keyframe = mat_hlp.homogeneous(
+            key_in_other = mat_hlp.homogeneous(
                 self.keyframe_to_other, np.array([0, 0, 0]))
-            if math.isclose(keyframe[2], 0.0, abs_tol=1e-9):
+            if math.isclose(key_in_other[2], 0.0, abs_tol=1e-9):
                 # Hack for horizontal stereo.
-                keyframe[2] = 1e-8
-            epipole_oth = mat_hlp.project_image(self.other_K, keyframe)
+                key_in_other[2] = 1e-8
+            epipole_oth_px = mat_hlp.project_image(self.other_K, key_in_other)
 
-            cv.circle(self.other_visual_image, epipole_oth.astype(int),
+            cv.line(self.other_visual_image, far_px.astype(int),
+                    epipole_oth_px.astype(int), (128, 128, 128))
+            cv.circle(self.other_visual_image, epipole_oth_px.astype(int),
                       3, (0, 255, 255), cv.FILLED)
 
-            cv.line(self.other_visual_image, near_px.astype(int),
-                    epipole_oth.astype(int), (255, 255, 255))
-            cv.drawMarker(self.other_visual_image,
-                          near_px.astype(int), (0, 0, 255))
-            cv.drawMarker(self.other_visual_image,
-                          mean_px.astype(int), (0, 255, 0))
-            cv.drawMarker(self.other_visual_image,
-                          far_px.astype(int), (255, 0, 0))
+            epinear_px = epiline.point_at(epiline.min_distance)
+            epifar_px = epiline.point_at(epiline.max_distance)
+            cv.line(self.other_visual_image, epinear_px.astype(int),
+                    epifar_px.astype(int), (255, 0, 0), 3)
 
     def _epiline_ray(self, px: tuple) -> tuple:
         # TODO: Fetch real depth.
