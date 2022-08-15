@@ -3,6 +3,7 @@ import logging
 import math
 import numpy as np
 
+import dapper.common.settings as settings
 from dapper.math.frustum import Frustum
 import dapper.image.gradient as gr
 import dapper.image.helpers as img_hlp
@@ -114,16 +115,16 @@ class EpiMatcher():
 
         # Dummy for testing ... just sample one from gradients.
         index = self.keyframe_strong_gradients[len(
-            self.keyframe_strong_gradients) // 7]
+            self.keyframe_strong_gradients) // 4]
         px = img_hlp.index_to_pixel(
             img_hlp.image_size(self.keyframe_image), index)
 
-        self._search_epiline(px)
+        self._search_along_epiline(px)
 
         # self._match_pixel(px)
         # self._visualize_epi(px)
 
-    def _search_epiline(self, px: tuple) -> None:
+    def _search_along_epiline(self, px: tuple) -> None:
         # Get near, mean and far samples along the epipolar ray.
         samples = self._epiline_ray(px)
         if samples is None:
@@ -137,7 +138,7 @@ class EpiMatcher():
 
         # Project the near and far distances to image positions
         # in the 'other' frame, in order to get an epipolar line
-        # in the image to search.
+        # to search along in the other frame.
         near_px = mat_hlp.project_image(self.other_K, near)
         far_px = mat_hlp.project_image(self.other_K, far)
 
@@ -145,6 +146,10 @@ class EpiMatcher():
         if not epiline.ok:
             logger.debug(f'Failed to extract epipolar line for px={px})')
             return
+
+        # Get the epiline where to find the template pixels in
+        # the keyframe.
+        epiline_key = self._epiline_key(px)
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
@@ -162,6 +167,11 @@ class EpiMatcher():
             cv.drawMarker(self.keyframe_visual_image, px, (0, 255, 0))
             cv.circle(self.keyframe_visual_image, epipole_key_px.astype(int),
                       3, (0, 255, 255), cv.FILLED)
+
+            begin = px - 10.0 * settings.EPILINE_SAMPLE_SIZE * epiline_key
+            end = px + 10.0 * settings.EPILINE_SAMPLE_SIZE * epiline_key
+            cv.line(self.keyframe_visual_image, begin.astype(int),
+                    end.astype(int), (255, 0, 0), 3)
 
             # Visualization in other frame: markers for the depth samples,
             # epipolar line from epipole to near point.
@@ -184,6 +194,11 @@ class EpiMatcher():
                     epifar_px.astype(int), (255, 0, 0), 3)
 
     def _epiline_ray(self, px: tuple) -> tuple:
+        """
+        Compute the epiline ray, from the pixel in the keyframe, and
+        produce a ray, together with distance ranges, in the other frame. 
+        If the computation fails, None is returned.
+        """
         # TODO: Fetch real depth.
         near_depth = 5
         mean_depth = 25
@@ -226,3 +241,21 @@ class EpiMatcher():
         near_distance, far_distance = distances
 
         return ray, near_distance, mean_distance, far_distance
+
+    def _epiline_key(self, px: tuple) -> np.ndarray:
+        """
+        Compute the epiline for use in the keyframe. The
+        epiline is represented as normalized gradient.
+        """
+        # The epiline in the keyframe is between the epipole
+        # (other camera position) and the pixel.
+        epipole = mat_hlp.homogeneous(
+            self.other_to_keyframe, np.array([0.0, 0.0, 0.0]))
+        if math.isclose(epipole[2], 0.0, abs_tol=1e-9):
+            # Hack for horizontal stereo.
+            epipole[2] = 1e-8
+
+        epipole_px = mat_hlp.project_image(self.keyframe_K, epipole)
+        gradient = px - epipole_px
+
+        return gradient / np.linalg.norm(gradient)
