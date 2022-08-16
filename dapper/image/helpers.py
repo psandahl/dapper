@@ -1,5 +1,6 @@
 import cv2 as cv
 import logging
+import math
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -128,3 +129,49 @@ def gray_to_bgr(image: np.ndarray) -> np.ndarray:
     assert image_channels(image)
 
     return cv.cvtColor(image, cv.COLOR_GRAY2BGR)
+
+
+def px_interpolate(image: np.ndarray, px: any) -> any:
+    """
+    Read an image, interpolated between four pixels.
+
+    Parameters:
+        image: The image to read.
+        px: A pixel (x, y), tuple, list or array.
+
+    Returns:
+        The color.
+    """
+    assert is_image(image)
+    assert len(px) == 2
+
+    x, y = px
+    assert x >= 0.0
+    assert y >= 0.0
+
+    # Get the integer part of pixel.
+    i_x = math.floor(x)
+    i_y = math.floor(y)
+
+    w, h = image_size(image)
+    if i_x < w - 1 and i_y < h - 1:
+        # Fractional part of pixel.
+        f_x = x - i_x
+        f_y = y - i_y
+
+        w00 = (1.0 - f_x) * (1.0 - f_y)
+        w10 = f_x * (1.0 - f_y)
+        w01 = (1.0 - f_x) * f_y
+        w11 = f_x * f_y
+
+        px00 = image[i_y, i_x]
+        px10 = image[i_y, i_x + 1]
+        px01 = image[i_y + 1, i_x]
+        px11 = image[i_y + 1, i_x + 1]
+
+        return w00 * px00 + w10 * px10 + w01 * px01 + w11 * px11
+    elif i_x < w and i_y < h:
+        # No interpolation at the border.
+        return image[i_y, i_x]
+    else:
+        return None

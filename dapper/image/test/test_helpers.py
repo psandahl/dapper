@@ -85,3 +85,40 @@ class HelpersTest(unittest.TestCase):
         self.assertTupleEqual(hlp.index_to_pixel(image_size, 0), (0, 0))
         self.assertTupleEqual(hlp.index_to_pixel(image_size, 29), (29, 0))
         self.assertTupleEqual(hlp.index_to_pixel(image_size, 62), (2, 2))
+
+    def test_px_interpolate(self):
+        """
+        Test interpolation in between pixels.
+        """
+        img = np.array([0.0, 1.0, 2.0, 3.0]).reshape(2, 2)
+
+        px = np.array([0.0, 0.0])
+        self.assertAlmostEqual(0.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.25, 0.0])
+        self.assertAlmostEqual(0.25 * 1.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.5, 0.0])
+        self.assertAlmostEqual(0.50 * 1.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.75, 0.0])
+        self.assertAlmostEqual(0.75 * 1.0, hlp.px_interpolate(img, px))
+
+        px = np.array([1.0, 0.0])
+        self.assertAlmostEqual(1.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.0, 0.25])
+        self.assertAlmostEqual(0.25 * 2.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.0, 0.5])
+        self.assertAlmostEqual(0.5 * 2.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.0, 0.75])
+        self.assertAlmostEqual(0.75 * 2.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.0, 1.0])
+        self.assertAlmostEqual(2.0, hlp.px_interpolate(img, px))
+
+        px = np.array([0.5, 0.5])
+        self.assertAlmostEqual(0.25 * 0.0 + 0.25 * 1.0 + 0.25 * 2.0 + 0.25 * 3.0,
+                               hlp.px_interpolate(img, px))
