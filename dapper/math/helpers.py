@@ -102,6 +102,35 @@ def homogeneous(mat: np.ndarray, xyz: np.ndarray, point: bool = True) -> np.ndar
 
 
 def normalize(vec: np.ndarray) -> np.ndarray:
+    """
+    Normalize a vector.
+
+    Parmeters:
+        vec: The vector.
+
+    Returns:
+        The normalized vector.
+    """
     assert isinstance(vec, np.ndarray)
 
     return vec / np.linalg.norm(vec)
+
+
+def sad(xs: any, ys: any) -> float:
+    """
+    Compute the sum of absolute differences.
+
+    Parameters:
+        xs: One set of data.
+        ys: Another set of data.
+
+    Returns:
+        The sum of absolute differences.
+    """
+    assert len(xs) == len(ys)
+
+    sum = 0.0
+    for i, x in enumerate(xs):
+        sum += abs(x - ys[i])
+
+    return sum

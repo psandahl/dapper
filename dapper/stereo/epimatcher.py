@@ -258,4 +258,4 @@ class EpiMatcher():
         epipole_px = mat_hlp.project_image(self.keyframe_K, epipole)
         gradient = px - epipole_px
 
-        return gradient / np.linalg.norm(gradient)
+        return mat_hlp.normalize(gradient)
