@@ -115,7 +115,7 @@ class EpiMatcher():
 
         # Dummy for testing ... just sample one from gradients.
         index = self.keyframe_strong_gradients[len(
-            self.keyframe_strong_gradients) // 4]
+            self.keyframe_strong_gradients) // 2]
         px = img_hlp.index_to_pixel(
             img_hlp.image_size(self.keyframe_image), index)
 
@@ -166,6 +166,22 @@ class EpiMatcher():
 
             # print(f'px={px} step={step} key={key_px} oth={oth_px}')
 
+        # Run the line search.
+        min_err = 5 * 255.0
+        min_err_dist = None
+        while epiline_oth.ratio() < 1.0:
+            err = mat_hlp.sad(template, search)
+            if err < min_err:
+                min_err = err
+                min_err_dist = epiline_oth.curr_distance
+
+            search.pop(0)
+            epiline_oth.forward()
+            oth_px = epiline_oth.point(2)
+            search.append(img_hlp.px_interpolate(self.other_image, oth_px))
+
+        print(f'min_err={min_err}')
+
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
             # and circle for epipole.
@@ -186,7 +202,7 @@ class EpiMatcher():
             begin = px - 10.0 * settings.EPILINE_SAMPLE_SIZE * epiline_key
             end = px + 10.0 * settings.EPILINE_SAMPLE_SIZE * epiline_key
             cv.line(self.keyframe_visual_image, begin.astype(int),
-                    end.astype(int), (255, 0, 0), 3)
+                    end.astype(int), (255, 0, 0), 1)
 
             # Visualization in other frame: markers for the depth samples,
             # epipolar line from epipole to near point.
@@ -206,7 +222,11 @@ class EpiMatcher():
             epinear_px = epiline_oth.point_at(epiline_oth.min_distance)
             epifar_px = epiline_oth.point_at(epiline_oth.max_distance)
             cv.line(self.other_visual_image, epinear_px.astype(int),
-                    epifar_px.astype(int), (255, 0, 0), 3)
+                    epifar_px.astype(int), (255, 0, 0), 1)
+
+            if not min_err_dist is None:
+                cv.drawMarker(self.other_visual_image, epiline_oth.point_at(
+                    min_err_dist).astype(int), (0, 255, 255))
 
     def _epiline_ray(self, px: tuple) -> tuple:
         """
