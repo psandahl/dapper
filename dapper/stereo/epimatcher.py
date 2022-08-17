@@ -121,9 +121,6 @@ class EpiMatcher():
 
         self._search_along_epiline(px)
 
-        # self._match_pixel(px)
-        # self._visualize_epi(px)
-
     def _search_along_epiline(self, px: tuple) -> None:
         # Get near, mean and far samples along the epipolar ray.
         samples = self._epiline_ray(px)
@@ -180,7 +177,23 @@ class EpiMatcher():
             oth_px = epiline_oth.point(2)
             search.append(img_hlp.px_interpolate(self.other_image, oth_px))
 
-        print(f'min_err={min_err}')
+        if not min_err_dist is None:
+            ratio = min_err_dist / epiline_oth.length
+            print(f'min_err={min_err} ratio along line={ratio}')
+
+            found_distance = near_distance + \
+                ratio * (far_distance - near_distance)
+
+            # print(
+            #    f'near_distance={near_distance} far_distance={far_distance} found_distance={found_distance}')
+            found_point = ray.point_at(found_distance)
+            print(f'near={near}')
+            print(f'far={far}')
+            print(f'found_point={found_point}')
+            found_point_key = mat_hlp.homogeneous(
+                self.other_to_keyframe, found_point)
+            found_depth = found_point_key[2]
+            print(f'Found depth in keyframe={found_depth}')
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
