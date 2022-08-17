@@ -152,12 +152,19 @@ class EpiMatcher():
         # the keyframe.
         epiline_key = self._epiline_key(px)
 
-        # Construct the five point template in the keyframe image.
-        template = np.zeros(5, dtype=np.float64)
-        for i, fac in enumerate(range(-2, 3)):
-            epi_px = px - fac * settings.EPILINE_SAMPLE_SIZE * epiline_key
-            template[i] = img_hlp.px_interpolate(self.keyframe_image, epi_px)
-            print(f'px={px} i={i} is={epi_px}')
+        # Construct the five point template in the keyframe image, and the
+        # initial search pixels.
+        template = list()
+        search = list()
+        for step in range(-2, 3):
+            key_px = px - step * settings.EPILINE_SAMPLE_SIZE * epiline_key
+            template.append(img_hlp.px_interpolate(
+                self.keyframe_image, key_px))
+
+            oth_px = epiline_oth.point(step)
+            search.append(img_hlp.px_interpolate(self.other_image, oth_px))
+
+            # print(f'px={px} step={step} key={key_px} oth={oth_px}')
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
@@ -204,7 +211,7 @@ class EpiMatcher():
     def _epiline_ray(self, px: tuple) -> tuple:
         """
         Compute the epiline ray, from the pixel in the keyframe, and
-        produce a ray, together with distance ranges, in the other frame. 
+        produce a ray, together with distance ranges, in the other frame.
         If the computation fails, None is returned.
         """
         # TODO: Fetch real depth.
