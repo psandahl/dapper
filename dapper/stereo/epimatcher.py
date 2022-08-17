@@ -249,8 +249,8 @@ class EpiMatcher():
         """
         # TODO: Fetch real depth.
         near_depth = 5
-        mean_depth = 25
-        far_depth = 250
+        mean_depth = 15
+        far_depth = 30
 
         # Pick points from the keyframe's depth distribution for this pixel.
         u, v = px
