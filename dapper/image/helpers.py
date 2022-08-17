@@ -149,11 +149,14 @@ def px_interpolate(image: np.ndarray, px: any) -> any:
     assert x >= 0.0
     assert y >= 0.0
 
+    w, h = image_size(image)
+    assert x < w
+    assert y < h
+
     # Get the integer part of pixel.
     i_x = math.floor(x)
     i_y = math.floor(y)
 
-    w, h = image_size(image)
     if i_x < w - 1 and i_y < h - 1:
         # Fractional part of pixel.
         f_x = x - i_x

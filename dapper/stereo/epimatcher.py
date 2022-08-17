@@ -155,13 +155,13 @@ class EpiMatcher():
         search = list()
         for step in range(-2, 3):
             key_px = px - step * settings.EPILINE_SAMPLE_SIZE * epiline_key
-            template.append(img_hlp.px_interpolate(
-                self.keyframe_image, key_px))
-
             oth_px = epiline_oth.point(step)
-            search.append(img_hlp.px_interpolate(self.other_image, oth_px))
 
             # print(f'px={px} step={step} key={key_px} oth={oth_px}')
+
+            template.append(img_hlp.px_interpolate(
+                self.keyframe_image, key_px))
+            search.append(img_hlp.px_interpolate(self.other_image, oth_px))
 
         # Run the line search.
         min_err = 5 * 255.0

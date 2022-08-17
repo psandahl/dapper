@@ -84,8 +84,8 @@ def strong_gradients(image: np.ndarray) -> np.ndarray:
     threshold_sq = settings.MIN_GRADIANT_THRESHOLD * settings.MIN_GRADIANT_THRESHOLD
 
     i = 0
-    for y in range(1, h - 1):
-        for x in range(1, w - 1):
+    for y in range(2, h - 2):
+        for x in range(2, w - 2):
             g = pixel_gradient(image, x, y)
 
             if gradient_magnitude_sq(g) > threshold_sq:
