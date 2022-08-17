@@ -142,14 +142,22 @@ class EpiMatcher():
         near_px = mat_hlp.project_image(self.other_K, near)
         far_px = mat_hlp.project_image(self.other_K, far)
 
-        epiline = Line(near_px, far_px, img_hlp.image_size(self.other_image))
-        if not epiline.ok:
+        epiline_oth = Line(
+            near_px, far_px, img_hlp.image_size(self.other_image))
+        if not epiline_oth.ok:
             logger.debug(f'Failed to extract epipolar line for px={px})')
             return
 
         # Get the epiline where to find the template pixels in
         # the keyframe.
         epiline_key = self._epiline_key(px)
+
+        # Construct the five point template in the keyframe image.
+        template = np.zeros(5, dtype=np.float64)
+        for i, fac in enumerate(range(-2, 3)):
+            epi_px = px - fac * settings.EPILINE_SAMPLE_SIZE * epiline_key
+            template[i] = img_hlp.px_interpolate(self.keyframe_image, epi_px)
+            print(f'px={px} i={i} is={epi_px}')
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
@@ -188,8 +196,8 @@ class EpiMatcher():
             cv.circle(self.other_visual_image, epipole_oth_px.astype(int),
                       3, (0, 255, 255), cv.FILLED)
 
-            epinear_px = epiline.point_at(epiline.min_distance)
-            epifar_px = epiline.point_at(epiline.max_distance)
+            epinear_px = epiline_oth.point_at(epiline_oth.min_distance)
+            epifar_px = epiline_oth.point_at(epiline_oth.max_distance)
             cv.line(self.other_visual_image, epinear_px.astype(int),
                     epifar_px.astype(int), (255, 0, 0), 3)
 
