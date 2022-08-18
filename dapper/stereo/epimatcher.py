@@ -115,7 +115,7 @@ class EpiMatcher():
 
         # Dummy for testing ... just sample one from gradients.
         index = self.keyframe_strong_gradients[len(
-            self.keyframe_strong_gradients) // 2]
+            self.keyframe_strong_gradients) // 20]
         px = img_hlp.index_to_pixel(
             img_hlp.image_size(self.keyframe_image), index)
 
@@ -184,16 +184,14 @@ class EpiMatcher():
             found_distance = near_distance + \
                 ratio * (far_distance - near_distance)
 
-            # print(
-            #    f'near_distance={near_distance} far_distance={far_distance} found_distance={found_distance}')
-            found_point = ray.point_at(found_distance)
-            print(f'near={near}')
-            print(f'far={far}')
-            print(f'found_point={found_point}')
-            found_point_key = mat_hlp.homogeneous(
-                self.other_to_keyframe, found_point)
-            found_depth = found_point_key[2]
-            print(f'Found depth in keyframe={found_depth}')
+            logger.debug(
+                f'Estimated depth={self._keyframe_depth(ray, found_distance):.2f}')
+            logger.debug(
+                f'Input near depth={self._keyframe_depth(ray, near_distance):.2f}')
+            logger.debug(
+                f'Input mean depth={self._keyframe_depth(ray, mean_distance):.2f}')
+            logger.debug(
+                f'Input far depth={self._keyframe_depth(ray, far_distance):.2f}')
 
         if self.visualize:
             # Visualization in keyframe: marker for selected pixel
@@ -250,7 +248,7 @@ class EpiMatcher():
         # TODO: Fetch real depth.
         near_depth = 5
         mean_depth = 15
-        far_depth = 30
+        far_depth = 100
 
         # Pick points from the keyframe's depth distribution for this pixel.
         u, v = px
@@ -307,3 +305,6 @@ class EpiMatcher():
         gradient = px - epipole_px
 
         return mat_hlp.normalize(gradient)
+
+    def _keyframe_depth(self, ray: Ray, distance: float) -> float:
+        return mat_hlp.homogeneous(self.other_to_keyframe, ray.point_at(distance))[2]
