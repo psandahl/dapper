@@ -194,13 +194,15 @@ class Frustum():
             # Create a new ray, with origin at new_near.
             tmp_ray = copy.deepcopy(ray)
             tmp_ray.origin = ray.point_at(new_near)
+            assert self.contains(tmp_ray.origin)
 
             # Clamp to frustum border.
             t = self.intersect_inside(tmp_ray)
             assert not t is None
-            assert self.contains(tmp_ray.point_at(t))
-
-            return new_near, new_near + t
+            if self.contains(tmp_ray.point_at(t)):
+                # There can be precision issues for some cases. Make
+                # sure that the clamping is inside.
+                return new_near, new_near + t
 
         # A case we do not solve. Return None.
         return None
