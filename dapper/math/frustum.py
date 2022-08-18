@@ -184,7 +184,8 @@ class Frustum():
 
             # Set new near, just inside frustum.
             new_near = t + 2 * 1e-09
-            assert self.contains(ray.point_at(new_near))
+            if not self.contains(ray.point_at(new_near)):
+                return None
 
             # Check if far is contained inside frustum.
             if self.contains(ray.point_at(far)):

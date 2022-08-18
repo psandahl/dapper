@@ -67,6 +67,11 @@ class StereoDevApp():
                     'frame', f'frame={self.epi_matcher.other_id}')
                 cv.imshow('frame', self.epi_matcher.other_visual_image)
 
+            if not self.epi_matcher.keyframe_depth_image is None:
+                cv.setWindowTitle(
+                    'depth', f'keyframe={self.epi_matcher.keyframe_id}')
+                cv.imshow('depth', self.epi_matcher.keyframe_depth_image)
+
             print(f'Current frame id={self.frame_id}')
             self._print_relative_latest_keyframe()
             print('Commands:')

@@ -50,6 +50,7 @@ class EpiMatcher():
         self.visualize = visualize
         self.keyframe_visual_image = None
         self.other_visual_image = None
+        self.keyframe_depth_image = None
 
     def set_keyframe(self, frame_id: int, image: np.ndarray,
                      pose: np.ndarray, K: np.ndarray, depth_map: any) -> None:
@@ -112,14 +113,20 @@ class EpiMatcher():
             self.keyframe_visual_image = img_hlp.gray_to_bgr(
                 self.keyframe_image)
             self.other_visual_image = img_hlp.gray_to_bgr(self.other_image)
+            self.keyframe_depth_image = np.zeros(
+                self.keyframe_image.shape, dtype=np.float64)
 
         # Dummy for testing ... just sample one from gradients.
-        index = self.keyframe_strong_gradients[len(
-            self.keyframe_strong_gradients) // 20]
-        px = img_hlp.index_to_pixel(
-            img_hlp.image_size(self.keyframe_image), index)
+        # index = self.keyframe_strong_gradients[len(
+        #    self.keyframe_strong_gradients) // 20]
+        # px = img_hlp.index_to_pixel(
+        #    img_hlp.image_size(self.keyframe_image), index)
 
-        self._search_along_epiline(px)
+        # self._search_along_epiline(px)
+        for index in self.keyframe_strong_gradients:
+            px = img_hlp.index_to_pixel(
+                img_hlp.image_size(self.keyframe_image), index)
+            self._search_along_epiline(px)
 
     def _search_along_epiline(self, px: tuple) -> None:
         # Get near, mean and far samples along the epipolar ray.
@@ -179,7 +186,7 @@ class EpiMatcher():
 
         if not min_err_dist is None:
             ratio = min_err_dist / epiline_oth.length
-            print(f'min_err={min_err} ratio along line={ratio}')
+            #print(f'min_err={min_err} ratio along line={ratio}')
 
             found_distance = near_distance + \
                 ratio * (far_distance - near_distance)
@@ -193,7 +200,12 @@ class EpiMatcher():
             logger.debug(
                 f'Input far depth={self._keyframe_depth(ray, far_distance):.2f}')
 
-        if self.visualize:
+            if self.visualize:
+                x, y = px
+                self.keyframe_depth_image[y, x] = 1.0 / \
+                    self._keyframe_depth(ray, found_distance)
+
+        if False and self.visualize:
             # Visualization in keyframe: marker for selected pixel
             # and circle for epipole.
             other_in_key = mat_hlp.homogeneous(
